@@ -6,6 +6,8 @@ import { S3_BUCKET } from '@shared/config'
 import { s3 } from '@shared/s3'
 import { RequestExtended } from '@shared/types'
 
+const ONE_WEEK_IN_SECONDS = 604800
+
 export const getFile = async (
   req: RequestExtended,
   res: Response,
@@ -25,7 +27,12 @@ export const getFile = async (
     throw Boom.forbidden()
   }
   if (isMetadataRequest) {
-    return res.status(200).send({ key, ...headObject })
+    const signedUrl = s3.getSignedUrl("getObject", {
+      Bucket: S3_BUCKET as string,
+      Key: key,
+      Expires: ONE_WEEK_IN_SECONDS
+    })
+    return res.status(200).send({ key, ...headObject, signedUrl })
   } else {
     const filesize = headObject.ContentLength as number
     const reqRange = req.headers.range
