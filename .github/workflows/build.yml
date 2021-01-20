@@ -115,6 +115,6 @@ jobs:
         with:
           username: ${{ secrets.DOCKER_USERNAME }}
           password: ${{ secrets.DOCKER_PASSWORD }}
-          repository: deploy20idocker/20i-hbp-reactnative
+          repository: deploy20idocker/hasura-backend-plus
           tag_with_ref: true
           tag_with_sha: true
