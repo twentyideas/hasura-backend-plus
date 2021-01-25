@@ -6,7 +6,7 @@
 
 ## Adding Google Auth
 
-This does uses Googles Web Applications using the OAuth 2.0 API. Google has other auth settings for iOS and Android and of course API key, however these are not supported here.
+This does use Googles Web Applications using the OAuth 2.0 API. Google has other auth settings for iOS and Android and of course API key, however these are not supported here.
 
 Local host is used in this example.
 
