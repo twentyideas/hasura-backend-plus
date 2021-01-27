@@ -48,6 +48,6 @@ with url params indicating your google account info.
 
 This will prompt user to choose google account and login to google.
 
-Upon choosing an account and login success the user is sent back to the http://localhost:3000 callback url you added to the account. These MUST match in the google account and in your docker-compose or you will see an error.
+Upon choosing an account and login success the user is sent back to the REDIRECT_URL_SUCCESS. These MUST match in the google account and in your docker-compose or you will see an error.
 
-The browser will now have a cookie from your domain with a refresh token. This can be exchanheaged for a jwt.
+The browser will now have a cookie from your domain with a refresh token. This can be exchanheaged for a jwt and then login.
