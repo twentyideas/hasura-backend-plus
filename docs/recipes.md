@@ -44,6 +44,7 @@ with url params indicating your google account info.
 
 This will prompt user to choose google account and login to google.
 
+<<<<<<< HEAD
 Upon choosing an account and login success the user is sent back to the http://localhost:3000/auth/login redirect url you added to the google account adn in the docker-compose. These MUST match in the google account and in your docker-compose **exactly** or you will see an error.
 
 The browser will now have a cookie from your domain with a refresh token. This dotken is also in the url string as a param. This can be exchanheaged for a jwt.
