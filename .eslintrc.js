@@ -11,5 +11,8 @@ module.exports = {
     "@typescript-eslint/camelcase": "off",
     "@typescript-eslint/member-delimiter-style": "off",
     "no-undef": "off",
+    "@typescript-eslint/explicit-function-return-type": "off",
+    "@typescript-eslint/no-var-requires": "off",
+    "no-prototype-builtins": "off",
   },
 }
