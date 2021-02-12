@@ -9,50 +9,97 @@ const signedUrl = Router()
 const ONE_WEEK_IN_SECONDS = 604800
 
 signedUrl.get("/get/:filename", async (req: RequestExtended, res: Response) => {
-  const key = getKey(req)
-  const url = s3.getSignedUrl("getObject", {
-    Bucket: S3_BUCKET as string,
-    Key: key,
-    Expires: ONE_WEEK_IN_SECONDS,
-  })
-  return res.send({ url })
+  try {
+    const key = getKey(req)
+    const url = s3.getSignedUrl("getObject", {
+      Bucket: S3_BUCKET as string,
+      Key: key,
+      Expires: ONE_WEEK_IN_SECONDS,
+    })
+    return res.send({ url })
+  } catch (error) {
+    console.error(error)
+    return res.status(500).send()
+  }
 })
 
 signedUrl.get("/put/:filename", async (req: RequestExtended, res: Response) => {
-  const key = getKey(req)
-  const url = s3.getSignedUrl("putObject", {
-    Bucket: S3_BUCKET as string,
-    Key: key,
-    Expires: ONE_WEEK_IN_SECONDS,
-  })
-  return res.send({ url })
+  try {
+    const key = getKey(req)
+    const url = s3.getSignedUrl("putObject", {
+      Bucket: S3_BUCKET as string,
+      Key: key,
+      Expires: ONE_WEEK_IN_SECONDS,
+    })
+    return res.send({ url })
+  } catch (error) {
+    console.error(error)
+    return res.status(500).send()
+  }
 })
 
 signedUrl.post(
   "/createMultipartUpload",
   async (req: RequestExtended, res: Response) => {
+    try {
+      const key = req.body.filename
+
+      const { UploadId } = await s3
+        .createMultipartUpload({
+          Bucket: S3_BUCKET as string,
+          Key: key,
+        })
+        .promise()
+
+      return res.send(UploadId)
+    } catch (error) {
+      console.error(error)
+      return res.status(500).send()
+    }
+  }
+)
+
+signedUrl.post("/getPartUrl", async (req: RequestExtended, res: Response) => {
+  try {
     const key = req.body.filename
-    const parts: number = req.body.parts
+    const UploadId = req.body.uploadId
+    const PartNumber = req.body.partNumber
 
-    const { UploadId } = await s3
-      .createMultipartUpload({
-        Bucket: S3_BUCKET as string,
-        Key: key,
-      })
-      .promise()
+    const url = await s3.getSignedUrlPromise("uploadPart", {
+      Bucket: S3_BUCKET as string,
+      Key: key,
+      UploadId,
+      PartNumber,
+      Expires: ONE_WEEK_IN_SECONDS,
+    })
 
-    const urls = await Promise.all(
-      Array.from({ length: parts }, (x, i) => i + 1).map(part =>
-        s3.getSignedUrlPromise("uploadPart", {
+    return res.send(url)
+  } catch (error) {
+    console.error(error)
+    return res.status(500).send()
+  }
+})
+
+signedUrl.post(
+  "/abortMultipartUpload",
+  async (req: RequestExtended, res: Response) => {
+    try {
+      const key = req.body.filename
+      const UploadId = req.body.uploadId
+
+      await s3
+        .abortMultipartUpload({
           Bucket: S3_BUCKET as string,
           Key: key,
           UploadId,
-          PartNumber: part + 1,
         })
-      )
-    )
+        .promise()
 
-    return res.send({ urls })
+      return res.send()
+    } catch (error) {
+      console.error(error)
+      return res.status(500).send()
+    }
   }
 )
 
@@ -64,20 +111,25 @@ interface Part {
 signedUrl.post(
   "/completeMultipartUpload",
   async (req: RequestExtended, res: Response) => {
-    const key = req.body.filename
-    const UploadId = req.body.uploadId
-    const Parts: Part[] = req.body.parts
+    try {
+      const key = req.body.filename
+      const UploadId = req.body.uploadId
+      const Parts: Part[] = req.body.parts
 
-    await s3
-      .completeMultipartUpload({
-        Bucket: S3_BUCKET as string,
-        Key: key,
-        UploadId,
-        MultipartUpload: { Parts },
-      })
-      .promise()
+      await s3
+        .completeMultipartUpload({
+          Bucket: S3_BUCKET as string,
+          Key: key,
+          UploadId,
+          MultipartUpload: { Parts },
+        })
+        .promise()
 
-    return res.send()
+      return res.send()
+    } catch (error) {
+      console.error(error)
+      return res.status(500).send()
+    }
   }
 )
 
