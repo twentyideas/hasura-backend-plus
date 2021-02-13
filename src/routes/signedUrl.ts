@@ -7,6 +7,26 @@ const signedUrl = Router()
 
 const ONE_WEEK_IN_SECONDS = 604800
 
+signedUrl.post("/get", async (req: RequestExtended, res: Response) => {
+  const key = req.body.filename
+  const url = s3.getSignedUrl("getObject", {
+    Bucket: S3_BUCKET as string,
+    Key: key,
+    Expires: ONE_WEEK_IN_SECONDS,
+  })
+  return res.send({ url })
+})
+
+signedUrl.post("/put", async (req: RequestExtended, res: Response) => {
+  const key = req.body.filename
+  const url = s3.getSignedUrl("putObject", {
+    Bucket: S3_BUCKET as string,
+    Key: key,
+    Expires: ONE_WEEK_IN_SECONDS,
+  })
+  return res.send({ url })
+})
+
 signedUrl.post(
   "/createMultipartUpload",
   async (req: RequestExtended, res: Response) => {
