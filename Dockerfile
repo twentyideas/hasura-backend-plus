@@ -1,9 +1,9 @@
 FROM node:14-alpine AS builder
 WORKDIR /app
-COPY package.json yarn.lock ./
-RUN yarn install
+COPY package.json package-lock.json ./
+RUN npm install
 COPY . .
-RUN yarn build
+RUN npm run build
 
 FROM node:14-alpine
 ARG NODE_ENV=production
@@ -12,8 +12,8 @@ ENV PORT 3000
 
 WORKDIR /app
 
-COPY package.json yarn.lock ./
-RUN yarn install && yarn cache clean
+COPY package.json package-lock.json ./
+RUN npm install
 
 COPY --from=builder /app/dist/ dist/
 COPY custom custom
@@ -24,4 +24,4 @@ COPY migrations-v1 migrations-v1
 HEALTHCHECK --interval=60s --timeout=2s --retries=3 CMD wget localhost:${PORT}/healthz -q -O - > /dev/null 2>&1
 
 EXPOSE $PORT
-CMD ["yarn", "start"]
+CMD ["npm", "run", "start"]

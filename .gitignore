@@ -9,4 +9,3 @@ config.yaml
 private.pem
 node_modules
 yarn-error.log
-package-lock.json
