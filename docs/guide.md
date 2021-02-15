@@ -190,8 +190,24 @@ It will return the same kind of payload as in `/auth/login`, with a new JWT:
 ### Backend
 Set the necessary environment variables on `docker-compose.yaml` under the `hasura-backend-plus` section. The OAuth Providers section from `.env.example` has a list of the supported providers and options. Make sure to set also the `PROVIDER_SUCCESS_REDIRECT` and `PROVIDER_FAILURE_REDIRECT` URLs to the frontend.
 
+Client ID and a client secret are required to create a route for the following providers:
+
+* google
+* facebook
+* github
+* linkedin
+* windowslive
+
+Twitter requires consumerKey, consumerSecret, and cookieSecret
+Apple requires client ID, client secret, key, and key ID
+
+If these are not provided the provider route will not be created.
+
+
 ### Frontend
 For OAuth login, redirect the user to `//hasura-backend-plus/auth/providers/{provider}` to perform the authentication. Upon success, the URL set in `PROVIDER_SUCCESS_REDIRECT` will be called back, with a `refresh_token` query parameter. Use this value to perform a GET on `//hasura-backend-plus/auth/token/refresh?refresh_token={refresh_token}` to obtain the response which contains the valid JWT.
+
+Google set up example in recipies.md
 
 ## Change email
 
