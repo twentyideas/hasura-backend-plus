@@ -1,19 +1,25 @@
-import { spawn } from 'child_process'
-import fetch from 'node-fetch'
-import { writeFileSync } from 'fs'
-import { copy, remove, pathExists, emptyDir } from 'fs-extra'
-import url from 'url'
-import cors from 'cors'
-import express from 'express'
-import helmet from 'helmet'
-import TMP from 'temp-dir'
-import { HASURA_ENDPOINT, HASURA_GRAPHQL_ADMIN_SECRET, HOST, PORT } from '@shared/config'
-import getJwks from './routes/auth/jwks'
+import { spawn } from "child_process"
+import fetch from "node-fetch"
+import { writeFileSync } from "fs"
+import { copy, remove, pathExists, emptyDir } from "fs-extra"
+import url from "url"
+import cors from "cors"
+import express from "express"
+import helmet from "helmet"
+import TMP from "temp-dir"
+import {
+  HASURA_ENDPOINT,
+  HASURA_GRAPHQL_ADMIN_SECRET,
+  HOST,
+  PORT,
+} from "@shared/config"
+import getJwks from "./routes/auth/jwks"
 
-const LOG_LEVEL = process.env.NODE_ENV === 'production' ? 'ERROR' : 'INFO'
+const LOG_LEVEL = process.env.NODE_ENV === "production" ? "ERROR" : "INFO"
 const TEMP_MIGRATION_DIR = `${TMP}/hasura-backend-plus-temp-migrations`
 
-const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout(resolve, ms))
+const sleep = (ms: number): Promise<void> =>
+  new Promise(resolve => setTimeout(resolve, ms))
 
 const waitFor = async (path: string, attempts = 240): Promise<void> => {
   if (attempts > 0) {
@@ -31,19 +37,19 @@ const waitFor = async (path: string, attempts = 240): Promise<void> => {
 
 const hasuraConsole = async (action: string): Promise<void> => {
   try {
-    const child = spawn('./node_modules/.bin/hasura', [
-      ...action.split(' '),
-      '--log-level',
+    const child = spawn("./node_modules/.bin/hasura", [
+      ...action.split(" "),
+      "--log-level",
       LOG_LEVEL,
-      '--skip-update-check',
-      '--project',
-      TEMP_MIGRATION_DIR
+      "--skip-update-check",
+      "--project",
+      TEMP_MIGRATION_DIR,
     ])
     for await (const data of child.stdout) {
       process.stdout.write(data.toString())
     }
   } catch (error) {
-    console.log('Error in starting hasura cli')
+    console.log("Error in starting hasura cli")
     console.log(error)
   }
 }
@@ -55,14 +61,17 @@ type Migration = {
 
 export default async (
   // eslint-disable-next-line @typescript-eslint/no-unused-vars
-  { migrations, metadata }: Migration = { migrations: './migrations', metadata: './metadata' }
+  { migrations, metadata }: Migration = {
+    migrations: "./migrations",
+    metadata: "./metadata",
+  }
 ): Promise<void> => {
-  console.log('Checking migrations and metadata...')
+  console.log("Checking migrations and metadata...")
   await new Promise((resolve, reject) => {
     const app = express()
     app.use(helmet())
     app.use(cors())
-    app.get('/auth/jwks', getJwks)
+    app.get("/auth/jwks", getJwks)
     /**
      * ! See: https://github.com/hasura/graphql-engine/issues/3636
      * ! When Hasura is set to use jwk_url with HBP, it needs to get the JWKS from HBP to start.
@@ -82,13 +91,13 @@ export default async (
           // * HBP uses config v1 so far
           // `version: 2\nendpoint: ${hasuraURL}\nadmin_secret: ${HASURA_GRAPHQL_ADMIN_SECRET}\nmetadata_directory: metadata\nenable_telemetry: false`,
           `version: 1\nendpoint: ${hasuraURL}\nadmin_secret: ${HASURA_GRAPHQL_ADMIN_SECRET}\nmetadata_directory: metadata\nenable_telemetry: false`,
-          { encoding: 'utf8' }
+          { encoding: "utf8" }
         )
         if (migrations && (await pathExists(migrations))) {
           // * Apply migrations
           console.log(`Applying migrations '${migrations}'...`)
           await copy(migrations, `${TEMP_MIGRATION_DIR}/migrations`)
-          await hasuraConsole('migrate apply')
+          await hasuraConsole("migrate apply")
         }
         // * Metadata is used in config v2. HBP uses config v1 so far
         // if (metadata && (await pathExists(metadata))) {
@@ -97,13 +106,13 @@ export default async (
         //   await copy(metadata, `${TEMP_MIGRATION_DIR}/metadata`)
         //   await hasuraConsole('metadata apply')
         // } else if (migrations && (await pathExists(migrations))) {
-        console.log('Reloading metadata...')
-        await hasuraConsole('metadata reload')
+        console.log("Reloading metadata...")
+        await hasuraConsole("metadata reload")
         // }
         await remove(TEMP_MIGRATION_DIR)
         server.close()
       })
-      server.on('close', () => resolve())
+      server.on("close", () => resolve())
     } catch (err) {
       reject(err)
     }

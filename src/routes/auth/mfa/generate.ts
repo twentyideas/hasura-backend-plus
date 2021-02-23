@@ -1,18 +1,21 @@
-import { Response } from 'express'
-import Boom from '@hapi/boom'
-import { authenticator } from 'otplib'
-import { asyncWrapper, createQR } from '@shared/helpers'
-import { OTP_ISSUER } from '@shared/config'
-import { request } from '@shared/request'
-import { updateOtpSecret } from '@shared/queries'
-import { RequestExtended } from '@shared/types'
+import { Response } from "express"
+import Boom from "@hapi/boom"
+import { authenticator } from "otplib"
+import { asyncWrapper, createQR } from "@shared/helpers"
+import { OTP_ISSUER } from "@shared/config"
+import { request } from "@shared/request"
+import { updateOtpSecret } from "@shared/queries"
+import { RequestExtended } from "@shared/types"
 
-async function generateMfa(req: RequestExtended, res: Response): Promise<unknown> {
+async function generateMfa(
+  req: RequestExtended,
+  res: Response
+): Promise<unknown> {
   if (!req.permission_variables) {
-    throw Boom.unauthorized('Not logged in')
+    throw Boom.unauthorized("Not logged in")
   }
 
-  const { 'user-id': user_id } = req.permission_variables
+  const { "user-id": user_id } = req.permission_variables
 
   /**
    * Generate OTP secret and key URI.

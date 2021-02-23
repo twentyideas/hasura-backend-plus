@@ -1,6 +1,6 @@
-import Boom from '@hapi/boom'
-import { castBooleanEnv } from '../utils'
-import { REDIRECT_URL_SUCCESS, REDIRECT_URL_ERROR } from '../application'
+import Boom from "@hapi/boom"
+import { castBooleanEnv } from "../utils"
+import { REDIRECT_URL_SUCCESS, REDIRECT_URL_ERROR } from "../application"
 
 /**
  * * OAuth settings
@@ -8,55 +8,55 @@ import { REDIRECT_URL_SUCCESS, REDIRECT_URL_ERROR } from '../application'
 export const {
   // External OAuth provider redirect URLS
   PROVIDER_SUCCESS_REDIRECT = REDIRECT_URL_SUCCESS,
-  PROVIDER_FAILURE_REDIRECT = REDIRECT_URL_ERROR
+  PROVIDER_FAILURE_REDIRECT = REDIRECT_URL_ERROR,
 } = process.env
 
 const PROVIDERS: Record<string, Record<string, string | undefined>> = {}
 
 // Github OAuth2 provider settings
-if (castBooleanEnv('GITHUB_ENABLE')) {
+if (castBooleanEnv("GITHUB_ENABLE")) {
   PROVIDERS.github = {
     clientID: process.env.GITHUB_CLIENT_ID,
     clientSecret: process.env.GITHUB_CLIENT_SECRET,
     authorizationURL: process.env.GITHUB_AUTHORIZATION_URL, // optional
     tokenURL: process.env.GITHUB_TOKEN_URL, // optional
-    userProfileURL: process.env.GITHUB_USER_PROFILE_URL // optional
+    userProfileURL: process.env.GITHUB_USER_PROFILE_URL, // optional
   }
 }
 
 // Google OAuth2 provider settings
-if (castBooleanEnv('GOOGLE_ENABLE')) {
+if (castBooleanEnv("GOOGLE_ENABLE")) {
   PROVIDERS.google = {
     clientID: process.env.GOOGLE_CLIENT_ID,
-    clientSecret: process.env.GOOGLE_CLIENT_SECRET
+    clientSecret: process.env.GOOGLE_CLIENT_SECRET,
   }
 }
 
 // Google OAuth2 provider settings
-if (castBooleanEnv('FACEBOOK_ENABLE')) {
+if (castBooleanEnv("FACEBOOK_ENABLE")) {
   PROVIDERS.facebook = {
     clientID: process.env.FACEBOOK_CLIENT_ID,
-    clientSecret: process.env.FACEBOOK_CLIENT_SECRET
+    clientSecret: process.env.FACEBOOK_CLIENT_SECRET,
   }
 }
 
 // Twitter provider settings
-if (castBooleanEnv('TWITTER_ENABLE')) {
+if (castBooleanEnv("TWITTER_ENABLE")) {
   PROVIDERS.twitter = {
     consumerKey: process.env.TWITTER_CONSUMER_KEY,
-    consumerSecret: process.env.TWITTER_CONSUMER_SECRET
+    consumerSecret: process.env.TWITTER_CONSUMER_SECRET,
   }
 }
 // LinkedIn OAuth2 provider settings
-if (castBooleanEnv('LINKEDIN_ENABLE')) {
+if (castBooleanEnv("LINKEDIN_ENABLE")) {
   PROVIDERS.linkedin = {
     clientID: process.env.LINKEDIN_CLIENT_ID,
-    clientSecret: process.env.LINKEDIN_CLIENT_SECRET
+    clientSecret: process.env.LINKEDIN_CLIENT_SECRET,
   }
 }
 
 // Apple OAuth2 provider settings
-if (castBooleanEnv('APPLE_ENABLE')) {
+if (castBooleanEnv("APPLE_ENABLE")) {
   try {
     PROVIDERS.apple = {
       clientID: process.env.APPLE_CLIENT_ID,
@@ -65,7 +65,7 @@ if (castBooleanEnv('APPLE_ENABLE')) {
       key:
         process.env.APPLE_PRIVATE_KEY &&
         // Convert contents from base64 string to string to avoid issues with line breaks in the environment variable
-        Buffer.from(process.env.APPLE_PRIVATE_KEY, 'base64').toString('ascii')
+        Buffer.from(process.env.APPLE_PRIVATE_KEY, "base64").toString("ascii"),
     }
   } catch (e) {
     throw Boom.badImplementation(`Invalid Apple OAuth Key file.`)
@@ -73,10 +73,10 @@ if (castBooleanEnv('APPLE_ENABLE')) {
 }
 
 // Microsoft Windows Live SSO provider settings
-if (castBooleanEnv('WINDOWS_LIVE_ENABLE')) {
+if (castBooleanEnv("WINDOWS_LIVE_ENABLE")) {
   PROVIDERS.windowslive = {
     clientID: process.env.WINDOWS_LIVE_CLIENT_ID,
-    clientSecret: process.env.WINDOWS_LIVE_CLIENT_SECRET
+    clientSecret: process.env.WINDOWS_LIVE_CLIENT_SECRET,
   }
 }
 

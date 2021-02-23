@@ -1,15 +1,15 @@
-import { Request, Response } from 'express'
-import Boom from '@hapi/boom'
-import bcrypt from 'bcryptjs'
-import { v4 as uuidv4 } from 'uuid'
-import { asyncWrapper, selectAccount } from '@shared/helpers'
-import { newJwtExpiry, createHasuraJwt } from '@shared/jwt'
-import { setRefreshToken } from '@shared/cookies'
-import { loginAnonymouslySchema, loginSchema } from '@shared/validation'
-import { insertAccount } from '@shared/queries'
-import { request } from '@shared/request'
-import { AccountData } from '@shared/types'
-import { ANONYMOUS_USERS_ENABLE, DEFAULT_ANONYMOUS_ROLE } from '@shared/config'
+import { Request, Response } from "express"
+import Boom from "@hapi/boom"
+import bcrypt from "bcryptjs"
+import { v4 as uuidv4 } from "uuid"
+import { asyncWrapper, selectAccount } from "@shared/helpers"
+import { newJwtExpiry, createHasuraJwt } from "@shared/jwt"
+import { setRefreshToken } from "@shared/cookies"
+import { loginAnonymouslySchema, loginSchema } from "@shared/validation"
+import { insertAccount } from "@shared/queries"
+import { request } from "@shared/request"
+import { AccountData } from "@shared/types"
+import { ANONYMOUS_USERS_ENABLE, DEFAULT_ANONYMOUS_ROLE } from "@shared/config"
 
 interface HasuraData {
   insert_auth_accounts: {
@@ -18,9 +18,12 @@ interface HasuraData {
   }
 }
 
-async function loginAccount({ body }: Request, res: Response): Promise<unknown> {
+async function loginAccount(
+  { body }: Request,
+  res: Response
+): Promise<unknown> {
   // default to true
-  const useCookie = typeof body.cookie !== 'undefined' ? body.cookie : true
+  const useCookie = typeof body.cookie !== "undefined" ? body.cookie : true
 
   if (ANONYMOUS_USERS_ENABLE) {
     const { anonymous } = await loginAnonymouslySchema.validateAsync(body)
@@ -39,19 +42,23 @@ async function loginAccount({ body }: Request, res: Response): Promise<unknown> 
             is_anonymous: true,
             default_role: DEFAULT_ANONYMOUS_ROLE,
             account_roles: {
-              data: [{ role: DEFAULT_ANONYMOUS_ROLE }]
+              data: [{ role: DEFAULT_ANONYMOUS_ROLE }],
             },
             user: {
-              data: { display_name: 'Anonymous user' }
-            }
-          }
+              data: { display_name: "Anonymous user" },
+            },
+          },
         })
       } catch (error) {
-        throw Boom.badImplementation('Unable to create user and sign in user anonymously')
+        throw Boom.badImplementation(
+          "Unable to create user and sign in user anonymously"
+        )
       }
 
       if (!hasura_data.insert_auth_accounts.returning.length) {
-        throw Boom.badImplementation('Unable to create user and sign in user anonymously')
+        throw Boom.badImplementation(
+          "Unable to create user and sign in user anonymously"
+        )
       }
 
       const account = hasura_data.insert_auth_accounts.returning[0]
@@ -65,13 +72,13 @@ async function loginAccount({ body }: Request, res: Response): Promise<unknown> 
       if (useCookie) {
         res.send({
           jwt_token,
-          jwt_expires_in
+          jwt_expires_in,
         })
       } else {
         res.send({
           jwt_token,
           jwt_expires_in,
-          refresh_token
+          refresh_token,
         })
       }
 
@@ -85,17 +92,17 @@ async function loginAccount({ body }: Request, res: Response): Promise<unknown> 
   const account = await selectAccount(body)
 
   if (!account) {
-    throw Boom.badRequest('Account does not exist.')
+    throw Boom.badRequest("Account does not exist.")
   }
 
   const { id, mfa_enabled, password_hash, active, ticket } = account
 
   if (!active) {
-    throw Boom.badRequest('Account is not activated.')
+    throw Boom.badRequest("Account is not activated.")
   }
 
   if (!(await bcrypt.compare(password, password_hash))) {
-    throw Boom.unauthorized('Username and password do not match')
+    throw Boom.unauthorized("Username and password do not match")
   }
 
   if (mfa_enabled) {
@@ -113,13 +120,13 @@ async function loginAccount({ body }: Request, res: Response): Promise<unknown> 
   if (useCookie) {
     res.send({
       jwt_token,
-      jwt_expires_in
+      jwt_expires_in,
     })
   } else {
     res.send({
       jwt_token,
       jwt_expires_in,
-      refresh_token
+      refresh_token,
     })
   }
 }

@@ -1,8 +1,8 @@
-import fetch, { Response } from 'node-fetch'
-import request, { SuperTest, Test } from 'supertest'
+import fetch, { Response } from "node-fetch"
+import request, { SuperTest, Test } from "supertest"
 
-import { SMTP_HOST, AUTO_ACTIVATE_NEW_USERS } from '@shared/config'
-import { generateRandomString, selectAccountByEmail } from '@shared/helpers'
+import { SMTP_HOST, AUTO_ACTIVATE_NEW_USERS } from "@shared/config"
+import { generateRandomString, selectAccountByEmail } from "@shared/helpers"
 
 // eslint-disable-next-line @typescript-eslint/no-empty-function
 console.error = function (): void {} // Disable the errors that will be raised by the tests
@@ -19,13 +19,13 @@ interface MailhogMessage {
   To: MailhogEmailAddress[]
   Content: {
     Headers: {
-      'Content-Type': string[]
+      "Content-Type": string[]
       Date: string[]
       From: string[]
-      'MIME-Version': string[]
-      'Message-ID': string[]
+      "MIME-Version": string[]
+      "Message-ID": string[]
       Received: string[]
-      'Return-Path': string[]
+      "Return-Path": string[]
       Subject: string[]
       To: string[]
       [key: string]: string[]
@@ -56,21 +56,30 @@ export interface TestAccount {
 
 export const createAccount = (): TestAccount => ({
   email: `${generateRandomString()}@${generateRandomString()}.com`,
-  password: generateRandomString()
+  password: generateRandomString(),
 })
 
-export const mailHogSearch = async (query: string, fields = 'to'): Promise<MailhogMessage[]> => {
+export const mailHogSearch = async (
+  query: string,
+  fields = "to"
+): Promise<MailhogMessage[]> => {
   const response = await fetch(
     `http://${SMTP_HOST}:8025/api/v2/search?kind=${fields}&query=${query}`
   )
   return ((await response.json()) as MailhogSearchResult).items
 }
 
-export const deleteMailHogEmail = async ({ ID }: MailhogMessage): Promise<Response> =>
-  await fetch(`http://${SMTP_HOST}:8025/api/v1/messages/${ID}`, { method: 'DELETE' })
+export const deleteMailHogEmail = async ({
+  ID,
+}: MailhogMessage): Promise<Response> =>
+  await fetch(`http://${SMTP_HOST}:8025/api/v1/messages/${ID}`, {
+    method: "DELETE",
+  })
 
 export const deleteEmailsOfAccount = async (email: string): Promise<void> =>
-  (await mailHogSearch(email)).forEach(async (message) => await deleteMailHogEmail(message))
+  (await mailHogSearch(email)).forEach(
+    async message => await deleteMailHogEmail(message)
+  )
 
 // Init a superset agent with possibly mocked config constants
 export const initAgent = (
@@ -78,32 +87,34 @@ export const initAgent = (
     [key: string]: boolean | string | number | string[] | undefined | object
   } = {}
 ): SuperTest<Test> => {
-  jest.mock('@shared/config', () => ({
-    ...jest.requireActual('@shared/config'),
-    ...config
+  jest.mock("@shared/config", () => ({
+    ...jest.requireActual("@shared/config"),
+    ...config,
   }))
   jest.resetModules() // TODO only reset '../server'
   // eslint-disable-next-line @typescript-eslint/no-var-requires
-  const { app } = require('../server')
+  const { app } = require("../server")
   return request(app)
 }
 
 export const itif = (condition: boolean): jest.It => (condition ? it : it.skip)
 
-export const registerAccount = async (agent: SuperTest<Test>): Promise<TestAccount> => {
+export const registerAccount = async (
+  agent: SuperTest<Test>
+): Promise<TestAccount> => {
   const { email, password } = createAccount()
-  await agent.post('/auth/register').send({ email, password })
+  await agent.post("/auth/register").send({ email, password })
   if (!AUTO_ACTIVATE_NEW_USERS) {
     const { ticket } = await selectAccountByEmail(email)
     await agent.get(`/auth/activate?ticket=${ticket}`)
     await deleteEmailsOfAccount(email)
   }
-  const res = await agent.post('/auth/login').send({ email, password })
+  const res = await agent.post("/auth/login").send({ email, password })
   // * Set the use variable so it is accessible to the jest test file
   return {
     email,
     password,
-    token: res.body.jwt_token
+    token: res.body.jwt_token,
   }
 }
 
@@ -112,7 +123,7 @@ export const deleteAccount = async (
   account: TestAccount
 ): Promise<void> => {
   // * Delete the account
-  await agent.post('/auth/delete')
+  await agent.post("/auth/delete")
   // * Remove any message sent to this account
   await deleteEmailsOfAccount(account.email)
 }

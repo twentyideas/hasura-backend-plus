@@ -1,11 +1,11 @@
-import 'jest-extended'
+import "jest-extended"
 
-import { SuperTest, Test, agent } from 'supertest'
+import { SuperTest, Test, agent } from "supertest"
 
-import { HOST, PORT } from '@shared/config'
-import { registerAccount } from '@test/test-utils'
+import { HOST, PORT } from "@shared/config"
+import { registerAccount } from "@test/test-utils"
 
-import { app } from '../../server'
+import { app } from "../../server"
 
 let request: SuperTest<Test>
 
@@ -22,8 +22,8 @@ afterAll(async () => {
   server.close()
 })
 
-it('should delete an account', async () => {
+it("should delete an account", async () => {
   await registerAccount(request)
-  const { status } = await request.post('/auth/delete')
+  const { status } = await request.post("/auth/delete")
   expect(status).toEqual(204)
 })

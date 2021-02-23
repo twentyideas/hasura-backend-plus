@@ -1,8 +1,8 @@
-import { Router } from 'express'
-import { Strategy } from 'passport-facebook'
-import Boom from '@hapi/boom'
-import { PROVIDERS } from '@shared/config'
-import { initProvider } from './utils'
+import { Router } from "express"
+import { Strategy } from "passport-facebook"
+import Boom from "@hapi/boom"
+import { PROVIDERS } from "@shared/config"
+import { initProvider } from "./utils"
 
 export default (router: Router): void => {
   const options = PROVIDERS.facebook
@@ -10,8 +10,12 @@ export default (router: Router): void => {
   if (options) {
     // Checks if the strategy has at least a client ID and a client secret
     if (!options.clientID || !options.clientSecret) {
-      throw Boom.badImplementation(`Missing environment variables for Facebook OAuth.`)
+      throw Boom.badImplementation(
+        `Missing environment variables for Facebook OAuth.`
+      )
     }
-    initProvider(router, 'facebook', Strategy, { profileFields: ['email', 'photos', 'displayName']  })
+    initProvider(router, "facebook", Strategy, {
+      profileFields: ["email", "photos", "displayName"],
+    })
   }
 }

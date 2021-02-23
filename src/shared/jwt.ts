@@ -6,19 +6,24 @@ import {
   JWT_CLAIMS_NAMESPACE,
   DEFAULT_USER_ROLE,
   DEFAULT_ANONYMOUS_ROLE,
-  JWT_CUSTOM_FIELDS
-} from './config'
-import { JWK, JWKS, JWT } from 'jose'
+  JWT_CUSTOM_FIELDS,
+} from "./config"
+import { JWK, JWKS, JWT } from "jose"
 
-import Boom from '@hapi/boom'
-import fs from 'fs'
-import kebabCase from 'lodash.kebabcase'
-import { Claims, Token, AccountData, ClaimValueType } from './types'
+import Boom from "@hapi/boom"
+import fs from "fs"
+import kebabCase from "lodash.kebabcase"
+import { Claims, Token, AccountData, ClaimValueType } from "./types"
 
-const RSA_TYPES = ['RS256', 'RS384', 'RS512']
-const SHA_TYPES = ['HS256', 'HS384', 'HS512']
+const RSA_TYPES = ["RS256", "RS384", "RS512"]
+const SHA_TYPES = ["HS256", "HS384", "HS512"]
 
-let jwtKey: string | JWK.RSAKey | JWK.ECKey | JWK.OKPKey | JWK.OctKey = JWT_KEY as string
+let jwtKey:
+  | string
+  | JWK.RSAKey
+  | JWK.ECKey
+  | JWK.OKPKey
+  | JWK.OctKey = JWT_KEY as string
 
 /**
  * * Sets the JWT Key.
@@ -32,20 +37,27 @@ if (RSA_TYPES.includes(JWT_ALGORITHM)) {
       jwtKey = JWK.asKey(jwtKey, { alg: JWT_ALGORITHM })
       jwtKey.toPEM(true)
     } catch (error) {
-      throw Boom.badImplementation('Invalid RSA private key in the JWT_KEY environment variable.')
+      throw Boom.badImplementation(
+        "Invalid RSA private key in the JWT_KEY environment variable."
+      )
     }
   } else {
     try {
       const file = fs.readFileSync(JWT_KEY_FILE_PATH)
       jwtKey = JWK.asKey(file)
     } catch (error) {
-      jwtKey = JWK.generateSync('RSA', 2048, { alg: JWT_ALGORITHM, use: 'sig' }, true)
+      jwtKey = JWK.generateSync(
+        "RSA",
+        2048,
+        { alg: JWT_ALGORITHM, use: "sig" },
+        true
+      )
       fs.writeFileSync(JWT_KEY_FILE_PATH, jwtKey.toPEM(true))
     }
   }
 } else if (SHA_TYPES.includes(JWT_ALGORITHM)) {
   if (!jwtKey) {
-    throw Boom.badImplementation('Empty JWT secret key.')
+    throw Boom.badImplementation("Empty JWT secret key.")
   }
 } else {
   throw Boom.badImplementation(`Invalid JWT algorithm: ${JWT_ALGORITHM}`)
@@ -58,7 +70,7 @@ export const newJwtExpiry = JWT_EXPIRES_IN * 60 * 1000
  * @param arr js array to be converted to Postgres array
  */
 function toPgArray(arr: string[]): string {
-  const m = arr.map((e) => `"${e}"`).join(',')
+  const m = arr.map(e => `"${e}"`).join(",")
   return `{${m}}`
 }
 
@@ -72,8 +84,10 @@ export function generatePermissionVariables(
   { default_role, account_roles = [], user }: AccountData,
   jwt = false
 ): { [key: string]: ClaimValueType } {
-  const prefix = jwt ? 'x-hasura-' : ''
-  const role = user.is_anonymous ? DEFAULT_ANONYMOUS_ROLE : default_role || DEFAULT_USER_ROLE
+  const prefix = jwt ? "x-hasura-" : ""
+  const role = user.is_anonymous
+    ? DEFAULT_ANONYMOUS_ROLE
+    : default_role || DEFAULT_USER_ROLE
   const accountRoles = account_roles.map(({ role: roleName }) => roleName)
 
   if (!accountRoles.includes(role)) {
@@ -85,22 +99,25 @@ export function generatePermissionVariables(
     [`${prefix}allowed-roles`]: accountRoles,
     [`${prefix}default-role`]: role,
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    ...JWT_CUSTOM_FIELDS.reduce<{ [key: string]: ClaimValueType }>((aggr: any, cursor) => {
-      const type = typeof user[cursor] as ClaimValueType
+    ...JWT_CUSTOM_FIELDS.reduce<{ [key: string]: ClaimValueType }>(
+      (aggr: any, cursor) => {
+        const type = typeof user[cursor] as ClaimValueType
 
-      let value
-      if (type === 'string') {
-        value = user[cursor]
-      } else if (Array.isArray(user[cursor])) {
-        value = toPgArray(user[cursor] as string[])
-      } else {
-        value = JSON.stringify(user[cursor] ?? null)
-      }
+        let value
+        if (type === "string") {
+          value = user[cursor]
+        } else if (Array.isArray(user[cursor])) {
+          value = toPgArray(user[cursor] as string[])
+        } else {
+          value = JSON.stringify(user[cursor] ?? null)
+        }
 
-      aggr[`${prefix}${kebabCase(cursor)}`] = value
+        aggr[`${prefix}${kebabCase(cursor)}`] = value
 
-      return aggr
-    }, {})
+        return aggr
+      },
+      {}
+    ),
   }
 }
 
@@ -114,7 +131,7 @@ export const getJwkStore = (): JWKS.KeyStore => {
     keyStore.add(jwtKey as JWK.RSAKey)
     return keyStore
   }
-  throw Boom.notImplemented('JWKS is not implemented on this server.')
+  throw Boom.notImplemented("JWKS is not implemented on this server.")
 }
 
 /**
@@ -123,7 +140,7 @@ export const getJwkStore = (): JWKS.KeyStore => {
 export const sign = (payload: object): string =>
   JWT.sign(payload, jwtKey, {
     algorithm: JWT_ALGORITHM,
-    expiresIn: `${JWT_EXPIRES_IN}m`
+    expiresIn: `${JWT_EXPIRES_IN}m`,
   })
 
 /**
@@ -131,14 +148,15 @@ export const sign = (payload: object): string =>
  * @param authorization Authorization header.
  */
 export const getClaims = (authorization: string | undefined): Claims => {
-  if (!authorization) throw Boom.unauthorized('Missing Authorization header.')
-  const token = authorization.replace('Bearer ', '')
+  if (!authorization) throw Boom.unauthorized("Missing Authorization header.")
+  const token = authorization.replace("Bearer ", "")
   try {
     const decodedToken = JWT.verify(token, jwtKey) as Token
-    if (!decodedToken[JWT_CLAIMS_NAMESPACE]) throw Boom.unauthorized('Claims namespace not found.')
+    if (!decodedToken[JWT_CLAIMS_NAMESPACE])
+      throw Boom.unauthorized("Claims namespace not found.")
     return decodedToken[JWT_CLAIMS_NAMESPACE]
   } catch (err) {
-    throw Boom.unauthorized('Invalid or expired JWT token.')
+    throw Boom.unauthorized("Invalid or expired JWT token.")
   }
 }
 
@@ -147,5 +165,5 @@ export const getClaims = (authorization: string | undefined): Claims => {
  */
 export const createHasuraJwt = (accountData: AccountData): string =>
   sign({
-    [JWT_CLAIMS_NAMESPACE]: generatePermissionVariables(accountData, true)
+    [JWT_CLAIMS_NAMESPACE]: generatePermissionVariables(accountData, true),
   })

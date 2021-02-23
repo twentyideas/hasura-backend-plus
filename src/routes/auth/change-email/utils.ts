@@ -1,16 +1,16 @@
-import { selectAccountByEmail } from '@shared/helpers'
-import { emailResetSchema } from '@shared/validation'
-import Boom from '@hapi/boom'
-import { RequestExtended } from '@shared/types'
+import { selectAccountByEmail } from "@shared/helpers"
+import { emailResetSchema } from "@shared/validation"
+import Boom from "@hapi/boom"
+import { RequestExtended } from "@shared/types"
 
 export const getRequestInfo = async (
   req: RequestExtended
 ): Promise<{ user_id: string | number; new_email: string }> => {
   if (!req.permission_variables) {
-    throw Boom.unauthorized('Not logged in')
+    throw Boom.unauthorized("Not logged in")
   }
 
-  const { 'user-id': user_id } = req.permission_variables
+  const { "user-id": user_id } = req.permission_variables
 
   // validate new email
   const { new_email } = await emailResetSchema.validateAsync(req.body)
@@ -26,10 +26,10 @@ export const getRequestInfo = async (
   }
 
   if (account_exists) {
-    throw Boom.badRequest('Cannot use this email.')
+    throw Boom.badRequest("Cannot use this email.")
   }
   return {
     user_id,
-    new_email
+    new_email,
   }
 }

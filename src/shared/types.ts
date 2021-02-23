@@ -1,4 +1,4 @@
-import { Request } from 'express'
+import { Request } from "express"
 
 export type ClaimValueType =
   | string
@@ -16,9 +16,9 @@ export type ClaimValueType =
  * Claims interface.
  */
 export interface Claims {
-  'x-hasura-user-id': string
-  'x-hasura-default-role': string
-  'x-hasura-allowed-roles': string[]
+  "x-hasura-user-id": string
+  "x-hasura-default-role": string
+  "x-hasura-allowed-roles": string[]
   [key: string]: ClaimValueType
 }
 
@@ -26,9 +26,9 @@ export interface Claims {
  * PermissionVariables interface.
  */
 export interface PermissionVariables {
-  'user-id': string
-  'default-role': string
-  'allowed-roles': string[]
+  "user-id": string
+  "default-role": string
+  "allowed-roles": string[]
   [key: string]: ClaimValueType
 }
 
@@ -101,7 +101,7 @@ export interface InsertAccountProviderToUser {
 
 export interface RefreshTokenMiddleware {
   value: string | null
-  type: 'query' | 'cookie' | null
+  type: "query" | "cookie" | null
 }
 
 export interface RequestExtended extends Request {

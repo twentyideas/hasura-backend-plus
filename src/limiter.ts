@@ -1,5 +1,5 @@
-import { MAX_REQUESTS, TIME_FRAME } from '@shared/config'
-import rateLimit, { Message } from 'express-rate-limit'
+import { MAX_REQUESTS, TIME_FRAME } from "@shared/config"
+import rateLimit, { Message } from "express-rate-limit"
 
 /**
  * In order to stay consistent with the error message
@@ -20,7 +20,7 @@ export const limiter = rateLimit({
   windowMs: TIME_FRAME,
   skip: ({ path }) => {
     // Don't limit health checks. See https://github.com/nhost/hasura-backend-plus/issues/175
-    if (path === '/healthz') return true
+    if (path === "/healthz") return true
     return false
   },
   /**
@@ -29,7 +29,7 @@ export const limiter = rateLimit({
    */
   message: ({
     statusCode: 429,
-    error: 'Too Many Requests',
-    message: 'You are being rate limited.'
-  } as unknown) as LimitMessage
+    error: "Too Many Requests",
+    message: "You are being rate limited.",
+  } as unknown) as LimitMessage,
 })

@@ -1,5 +1,5 @@
-import { NextFunction, Response } from 'express'
-import { RequestExtended } from '@shared/types'
+import { NextFunction, Response } from "express"
+import { RequestExtended } from "@shared/types"
 
 interface Error {
   output?: {
@@ -34,8 +34,8 @@ export async function errors(
    */
   const error = err?.output?.payload || {
     statusCode: code,
-    error: code === 400 ? 'Bad Request' : 'Internal Server Error',
-    message: err?.details?.[0]?.message
+    error: code === 400 ? "Bad Request" : "Internal Server Error",
+    message: err?.details?.[0]?.message,
   }
 
   return res.status(code).send({ ...error })

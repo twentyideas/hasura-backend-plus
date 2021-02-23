@@ -1,12 +1,18 @@
-import { NextFunction, Response } from 'express'
-import { v4 as uuidv4 } from 'uuid'
-import { PathConfig, createContext, getHeadObject, getKey, hasPermission } from './utils'
+import { NextFunction, Response } from "express"
+import { v4 as uuidv4 } from "uuid"
+import {
+  PathConfig,
+  createContext,
+  getHeadObject,
+  getKey,
+  hasPermission,
+} from "./utils"
 
-import Boom from '@hapi/boom'
-import { S3_BUCKET } from '@shared/config'
-import { UploadedFile } from 'express-fileupload'
-import { s3 } from '@shared/s3'
-import { RequestExtended } from '@shared/types'
+import Boom from "@hapi/boom"
+import { S3_BUCKET } from "@shared/config"
+import { UploadedFile } from "express-fileupload"
+import { s3 } from "@shared/s3"
+import { RequestExtended } from "@shared/types"
 
 export const uploadFile = async (
   req: RequestExtended,
@@ -20,7 +26,7 @@ export const uploadFile = async (
   const oldHeadObject = await getHeadObject(req, true)
   const isNew = !oldHeadObject
 
-  console.log('files:')
+  console.log("files:")
   console.log(req.files)
 
   if (isNew && !req.files?.file) {
@@ -30,7 +36,12 @@ export const uploadFile = async (
   const resource = req.files?.file as UploadedFile
   const context = createContext(req, resource)
 
-  if (!hasPermission(isNew ? [rules.create, rules.write] : [rules.update, rules.write], context)) {
+  if (
+    !hasPermission(
+      isNew ? [rules.create, rules.write] : [rules.update, rules.write],
+      context
+    )
+  ) {
     throw Boom.forbidden()
   }
 
@@ -42,20 +53,20 @@ export const uploadFile = async (
       Body: resource.data,
       ContentType: resource.mimetype,
       Metadata: {
-        token: oldHeadObject?.Metadata?.token || uuidv4()
-      }
+        token: oldHeadObject?.Metadata?.token || uuidv4(),
+      },
     }
     try {
       await s3.upload(upload_params).promise()
     } catch (err) {
-      console.error('fail to upload...')
+      console.error("fail to upload...")
       console.error({ upload_params })
 
       console.error(err)
-      throw Boom.badImplementation('Impossible to create or update the object.')
+      throw Boom.badImplementation("Impossible to create or update the object.")
     }
   } else if (!isNew) {
-    throw Boom.notImplemented('Setting metadata is not implemented')
+    throw Boom.notImplemented("Setting metadata is not implemented")
     // await replaceMetadata(req, true, generateMetadata(metadata, context))
   }
   const headObject = await getHeadObject(req)

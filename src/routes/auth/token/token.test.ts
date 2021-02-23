@@ -1,9 +1,9 @@
-import 'jest-extended'
+import "jest-extended"
 
-import { account, request } from '@test/test-mock-account'
+import { account, request } from "@test/test-mock-account"
 
-it('should refresh the token', async () => {
-  const { body, status } = await request.get('/auth/token/refresh')
+it("should refresh the token", async () => {
+  const { body, status } = await request.get("/auth/token/refresh")
 
   expect(status).toEqual(200)
 
@@ -11,25 +11,25 @@ it('should refresh the token', async () => {
   expect(body.jwt_expires_in).toBeNumber()
 })
 
-it('should revoke the token', async () => {
-  const { status } = await request.post('/auth/token/revoke')
+it("should revoke the token", async () => {
+  const { status } = await request.post("/auth/token/revoke")
 
   expect(status).toEqual(204)
 })
 
-describe('handle refresh tokens without cookies', () => {
+describe("handle refresh tokens without cookies", () => {
   let jwtToken: string
   let refreshToken: string
 
   // to make sure no cookies are set
-  it('Should logout user', async () => {
-    const { status } = await request.post('/auth/logout')
+  it("Should logout user", async () => {
+    const { status } = await request.post("/auth/logout")
     expect(status).toEqual(204)
   })
 
-  it('Should login user', async () => {
+  it("Should login user", async () => {
     const { body, status } = await request
-      .post('/auth/login')
+      .post("/auth/login")
       .send({ email: account.email, password: account.password, cookie: false })
 
     // Save refresh token to globally scoped variable.
@@ -39,9 +39,9 @@ describe('handle refresh tokens without cookies', () => {
     expect(status).toEqual(200)
   })
 
-  it('should refresh the token', async () => {
+  it("should refresh the token", async () => {
     const { body, status } = await request
-      .get('/auth/token/refresh')
+      .get("/auth/token/refresh")
       .query({ refresh_token: refreshToken })
 
     expect(status).toEqual(200)
@@ -51,9 +51,9 @@ describe('handle refresh tokens without cookies', () => {
     expect(body.refresh_token).toBeString()
   })
 
-  it('should revoke the token', async () => {
+  it("should revoke the token", async () => {
     const { status } = await request
-      .post('/auth/token/revoke')
+      .post("/auth/token/revoke")
       .set({ Authorization: `Bearer ${jwtToken}` })
 
     expect(status).toEqual(204)

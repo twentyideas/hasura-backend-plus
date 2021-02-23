@@ -6,12 +6,12 @@ import {
   SMTP_SECURE,
   SMTP_SENDER,
   SMTP_USER,
-  SMTP_AUTH_METHOD
-} from '@shared/config'
+  SMTP_AUTH_METHOD,
+} from "@shared/config"
 
-import Email from 'email-templates'
-import nodemailer from 'nodemailer'
-import path from 'path'
+import Email from "email-templates"
+import nodemailer from "nodemailer"
+import path from "path"
 
 /**
  * SMTP transport.
@@ -22,9 +22,9 @@ const transport = nodemailer.createTransport({
   secure: Boolean(SMTP_SECURE),
   auth: {
     pass: SMTP_PASS,
-    user: SMTP_USER
+    user: SMTP_USER,
   },
-  authMethod: SMTP_AUTH_METHOD
+  authMethod: SMTP_AUTH_METHOD,
 })
 
 /**
@@ -35,9 +35,9 @@ export const emailClient = new Email({
   message: { from: SMTP_SENDER },
   send: EMAILS_ENABLE,
   views: {
-    root: path.resolve(process.env.PWD || '.', 'custom/emails'),
+    root: path.resolve(process.env.PWD || ".", "custom/emails"),
     options: {
-      extension: 'ejs'
-    }
-  }
+      extension: "ejs",
+    },
+  },
 })

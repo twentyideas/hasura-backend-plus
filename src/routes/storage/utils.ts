@@ -1,17 +1,17 @@
-import safeEval, { FunctionFactory } from 'notevil'
-import { v4 as uuidv4 } from 'uuid'
+import safeEval, { FunctionFactory } from "notevil"
+import { v4 as uuidv4 } from "uuid"
 
-import Boom from '@hapi/boom'
-import { HeadObjectOutput } from 'aws-sdk/clients/s3'
-import { S3_BUCKET } from '@shared/config'
-import fs from 'fs'
-import path from 'path'
-import { s3 } from '@shared/s3'
-import yaml from 'js-yaml'
-import { PermissionVariables, RequestExtended } from '@shared/types'
+import Boom from "@hapi/boom"
+import { HeadObjectOutput } from "aws-sdk/clients/s3"
+import { S3_BUCKET } from "@shared/config"
+import fs from "fs"
+import path from "path"
+import { s3 } from "@shared/s3"
+import yaml from "js-yaml"
+import { PermissionVariables, RequestExtended } from "@shared/types"
 
-export const OBJECT_PREFIX = '/o'
-export const META_PREFIX = '/m'
+export const OBJECT_PREFIX = "/o"
+export const META_PREFIX = "/m"
 export interface PathConfig {
   read: string
   write: string
@@ -41,7 +41,7 @@ interface StorageRequest {
 export const containsSomeRule = (
   rulesDefinition: Partial<PathConfig> = {},
   rules: (string | undefined)[]
-): boolean => Object.keys(rulesDefinition).some((rule) => rules.includes(rule))
+): boolean => Object.keys(rulesDefinition).some(rule => rules.includes(rule))
 
 type StorageContext = { [key: string]: unknown } & {
   request: StorageRequest
@@ -51,16 +51,18 @@ type StorageContext = { [key: string]: unknown } & {
 let storageRules: StorageRules = { paths: {} }
 try {
   const fileContents = fs.readFileSync(
-    path.resolve(process.env.PWD || '.', 'custom/storage-rules/rules.yaml'),
-    'utf8'
+    path.resolve(process.env.PWD || ".", "custom/storage-rules/rules.yaml"),
+    "utf8"
   )
   try {
     storageRules = yaml.safeLoad(fileContents) as StorageRules
   } catch (e) {
-    throw Boom.badImplementation('Custom storage security rules: invalid YAML file.')
+    throw Boom.badImplementation(
+      "Custom storage security rules: invalid YAML file."
+    )
   }
 } catch (e) {
-  console.warn('No custom storage security rules found.')
+  console.warn("No custom storage security rules found.")
 }
 
 export const STORAGE_RULES = storageRules
@@ -70,10 +72,13 @@ const storageFunctions = (context: object): { [key: string]: Function } =>
   Object.entries(storageRules.functions || {}).reduce<{
     [key: string]: Function
   }>((aggr, [name, value]) => {
-    if (typeof value === 'string') {
+    if (typeof value === "string") {
       aggr[name] = FunctionFactory(context)('"use strict"; ' + value)
     } else {
-      aggr[name] = FunctionFactory(context)(...value.params, '"use strict"; ' + value.code)
+      aggr[name] = FunctionFactory(context)(
+        ...value.params,
+        '"use strict"; ' + value.code
+      )
     }
     return aggr
   }, {})
@@ -89,10 +94,10 @@ export const createContext = (
       path: req.path,
       method: req.method,
       query: req.query,
-      auth
+      auth,
     },
     ...req.params,
-    resource: s3HeadObject
+    resource: s3HeadObject,
   }
 
   const functions = storageFunctions(variables)
@@ -100,22 +105,33 @@ export const createContext = (
   return { ...functions, ...variables }
 }
 
-export const hasPermission = (rules: (string | undefined)[], context: object): boolean => {
-  return rules.some((rule) => rule && !!safeEval(rule, context))
+export const hasPermission = (
+  rules: (string | undefined)[],
+  context: object
+): boolean => {
+  return rules.some(rule => rule && !!safeEval(rule, context))
 }
 
-export const generateMetadata = (metadataParams: object, context: object): object =>
-  Object.entries(metadataParams).reduce<{ [key: string]: unknown }>((aggr, [key, jsCode]) => {
-    try {
-      const value = safeEval(jsCode as string, context)
-      if (value) {
-        aggr[key] = value
+export const generateMetadata = (
+  metadataParams: object,
+  context: object
+): object =>
+  Object.entries(metadataParams).reduce<{ [key: string]: unknown }>(
+    (aggr, [key, jsCode]) => {
+      try {
+        const value = safeEval(jsCode as string, context)
+        if (value) {
+          aggr[key] = value
+        }
+      } catch (err) {
+        throw Boom.badImplementation(
+          `Invalid formula for metadata key ${key}: '${jsCode}'`
+        )
       }
-    } catch (err) {
-      throw Boom.badImplementation(`Invalid formula for metadata key ${key}: '${jsCode}'`)
-    }
-    return aggr
-  }, {})
+      return aggr
+    },
+    {}
+  )
 
 // Creates an object key that is the path without the first character '/'
 export const getKey = (req: RequestExtended): string => req.path.substring(1)
@@ -126,7 +142,7 @@ export const getHeadObject = async (
 ): Promise<HeadObjectOutput | undefined> => {
   const params = {
     Bucket: S3_BUCKET as string,
-    Key: getKey(req)
+    Key: getKey(req),
   }
   try {
     return await s3.headObject(params).promise()
@@ -154,15 +170,15 @@ export const replaceMetadata = async (
     ContentType: oldHeadObject?.ContentType,
     Metadata: {
       ...((keepOldMetadata && oldHeadObject?.Metadata) || {
-        token: uuidv4()
+        token: uuidv4(),
       }),
-      ...newMetadata
+      ...newMetadata,
     },
-    MetadataDirective: 'REPLACE'
+    MetadataDirective: "REPLACE",
   }
   try {
     await s3.copyObject(params).promise()
   } catch (err) {
-    throw Boom.badImplementation('Impossible to update the object metadata.')
+    throw Boom.badImplementation("Impossible to update the object metadata.")
   }
 }

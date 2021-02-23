@@ -1,7 +1,7 @@
 /* eslint-disable jest/no-standalone-expect */
 
-import 'jest-extended'
-import { v4 as uuidv4 } from 'uuid'
+import "jest-extended"
+import { v4 as uuidv4 } from "uuid"
 
 import {
   AUTO_ACTIVATE_NEW_USERS,
@@ -10,16 +10,20 @@ import {
   REDIRECT_URL_ERROR,
   JWT_CLAIMS_NAMESPACE,
   HOST,
-  PORT
+  PORT,
   // ANONYMOUS_USERS_ENABLE
-} from '@shared/config'
-import { generateRandomString, selectAccountByEmail } from '@shared/helpers'
-import { deleteMailHogEmail, mailHogSearch, deleteAccount } from '@test/test-utils'
+} from "@shared/config"
+import { generateRandomString, selectAccountByEmail } from "@shared/helpers"
+import {
+  deleteMailHogEmail,
+  mailHogSearch,
+  deleteAccount,
+} from "@test/test-utils"
 
-import { JWT } from 'jose'
-import { Token } from '@shared/types'
-import { app } from '../../server'
-import { SuperTest, Test, agent } from 'supertest'
+import { JWT } from "jose"
+import { Token } from "@shared/types"
+import { app } from "../../server"
+import { SuperTest, Test, agent } from "supertest"
 
 /**
  * Store variables in memory.
@@ -46,128 +50,145 @@ afterAll(async () => {
 })
 
 const pwndPasswordIt = HIBP_ENABLE ? it : it.skip
-pwndPasswordIt('should tell the password has been pwned', async () => {
+pwndPasswordIt("should tell the password has been pwned", async () => {
   const {
     status,
-    body: { message }
-  } = await request.post('/auth/register').send({ email: 'test@example.com', password: '123456' })
+    body: { message },
+  } = await request
+    .post("/auth/register")
+    .send({ email: "test@example.com", password: "123456" })
   expect(status).toEqual(400)
-  expect(message).toEqual('Password is too weak.')
+  expect(message).toEqual("Password is too weak.")
 })
 
-it('should create an account', async () => {
+it("should create an account", async () => {
   const { status } = await request
-    .post('/auth/register')
-    .send({ email, password, user_data: { name: 'Test name' } })
+    .post("/auth/register")
+    .send({ email, password, user_data: { name: "Test name" } })
   expect(status).toEqual(204)
 })
 
-it('should fail to create accunt with unallowed role', async () => {
-  const { status } = await request.post('/auth/register').send({
-    email: 'test1@nhost.io',
+it("should fail to create accunt with unallowed role", async () => {
+  const { status } = await request.post("/auth/register").send({
+    email: "test1@nhost.io",
     password,
-    user_data: { name: 'Test name' },
+    user_data: { name: "Test name" },
     register_options: {
-      allowed_roles: ['user', 'me', 'super-admin']
-    }
+      allowed_roles: ["user", "me", "super-admin"],
+    },
   })
   expect(status).toEqual(400)
 })
 
-it('should fail to create accunt with default_role that does not overlap allowed_roles', async () => {
-  const { status } = await request.post('/auth/register').send({
-    email: 'test2@nhost.io',
+it("should fail to create accunt with default_role that does not overlap allowed_roles", async () => {
+  const { status } = await request.post("/auth/register").send({
+    email: "test2@nhost.io",
     password,
-    user_data: { name: 'Test name' },
+    user_data: { name: "Test name" },
     register_options: {
-      default_role: 'editor',
-      allowed_roles: ['user', 'me']
-    }
+      default_role: "editor",
+      allowed_roles: ["user", "me"],
+    },
   })
   expect(status).toEqual(400)
 })
 
-it('should create account with default_rolw that is in the ALLOWED_USER_ROLES variable', async () => {
-  const { status } = await request.post('/auth/register').send({
-    email: 'test3@nhost.io',
+it("should create account with default_rolw that is in the ALLOWED_USER_ROLES variable", async () => {
+  const { status } = await request.post("/auth/register").send({
+    email: "test3@nhost.io",
     password,
-    user_data: { name: 'Test name' },
+    user_data: { name: "Test name" },
     register_options: {
-      default_role: 'editor'
-    }
+      default_role: "editor",
+    },
   })
   expect(status).toEqual(204)
 })
 
-it('should register account with default_role and allowed_roles set', async () => {
-  const { status } = await request.post('/auth/register').send({
-    email: 'test4@nhost.io',
+it("should register account with default_role and allowed_roles set", async () => {
+  const { status } = await request.post("/auth/register").send({
+    email: "test4@nhost.io",
     password,
-    user_data: { name: 'Test name' },
+    user_data: { name: "Test name" },
     register_options: {
-      default_role: 'user',
-      allowed_roles: ['user', 'me']
-    }
+      default_role: "user",
+      allowed_roles: ["user", "me"],
+    },
   })
   expect(status).toEqual(204)
 })
 
-it('should tell the account already exists', async () => {
+it("should tell the account already exists", async () => {
   const {
     status,
-    body: { message }
-  } = await request.post('/auth/register').send({ email, password })
+    body: { message },
+  } = await request.post("/auth/register").send({ email, password })
   expect(status).toEqual(400)
-  expect(message).toEqual('Account already exists.')
+  expect(message).toEqual("Account already exists.")
 })
 
 // * Only run test if auto activation is disabled
 const manualActivationIt = !AUTO_ACTIVATE_NEW_USERS ? it : it.skip
 
-manualActivationIt('should fail to activate an user from a wrong ticket', async () => {
-  const { status, redirect, header } = await request.get(`/auth/activate?ticket=${uuidv4()}`)
-  expect(
-    status === 500 || (status === 302 && redirect && header?.location === REDIRECT_URL_ERROR)
-  ).toBeTrue()
-})
-
-manualActivationIt('should activate the account from a valid ticket', async () => {
-  let ticket
-  if (EMAILS_ENABLE) {
-    // Sends the email, checks if it's received and use the link for activation
-    const [message] = await mailHogSearch(email)
-    expect(message).toBeTruthy()
-    expect(message.Content.Headers.Subject).toInclude('Confirm your email address')
-    ticket = message.Content.Headers['X-Ticket'][0]
-    await deleteMailHogEmail(message)
-  } else {
-    ticket = (await selectAccountByEmail(email)).ticket
+manualActivationIt(
+  "should fail to activate an user from a wrong ticket",
+  async () => {
+    const { status, redirect, header } = await request.get(
+      `/auth/activate?ticket=${uuidv4()}`
+    )
+    expect(
+      status === 500 ||
+        (status === 302 && redirect && header?.location === REDIRECT_URL_ERROR)
+    ).toBeTrue()
   }
-  const { status } = await request.get(`/auth/activate?ticket=${ticket}`)
-  expect(status).toBeOneOf([204, 302])
-})
+)
 
-it('should not sign user with wrong password', async () => {
-  const { status } = await request.post('/auth/login').send({ email, password: 'sommar' })
+manualActivationIt(
+  "should activate the account from a valid ticket",
+  async () => {
+    let ticket
+    if (EMAILS_ENABLE) {
+      // Sends the email, checks if it's received and use the link for activation
+      const [message] = await mailHogSearch(email)
+      expect(message).toBeTruthy()
+      expect(message.Content.Headers.Subject).toInclude(
+        "Confirm your email address"
+      )
+      ticket = message.Content.Headers["X-Ticket"][0]
+      await deleteMailHogEmail(message)
+    } else {
+      ticket = (await selectAccountByEmail(email)).ticket
+    }
+    const { status } = await request.get(`/auth/activate?ticket=${ticket}`)
+    expect(status).toBeOneOf([204, 302])
+  }
+)
+
+it("should not sign user with wrong password", async () => {
+  const { status } = await request
+    .post("/auth/login")
+    .send({ email, password: "sommar" })
   expect(status).toEqual(401)
 })
 
-it('should not sign in non existing user', async () => {
+it("should not sign in non existing user", async () => {
   const { status } = await request
-    .post('/auth/login')
-    .send({ email: 'non-existing@nhost.io', password: 'sommar' })
+    .post("/auth/login")
+    .send({ email: "non-existing@nhost.io", password: "sommar" })
   expect(status).toEqual(400)
 })
 
-it('should complain about incorrect email', async () => {
+it("should complain about incorrect email", async () => {
   const { status } = await request
-    .post('/auth/login')
-    .send({ email: 'not-valid-email', password: 'sommar' })
+    .post("/auth/login")
+    .send({ email: "not-valid-email", password: "sommar" })
   expect(status).toEqual(400)
 })
 
-it('should sign the user in', async () => {
-  const { body, status } = await request.post('/auth/login').send({ email, password })
+it("should sign the user in", async () => {
+  const { body, status } = await request
+    .post("/auth/login")
+    .send({ email, password })
   // Save JWT token to globally scoped varaible.
   jwtToken = body.jwt_token
   expect(status).toEqual(200)
@@ -175,23 +196,23 @@ it('should sign the user in', async () => {
   expect(body.jwt_expires_in).toBeNumber()
 })
 
-it('should decode a valid custom user claim', async () => {
+it("should decode a valid custom user claim", async () => {
   const decodedJwt = JWT.decode(jwtToken) as Token
   expect(decodedJwt[JWT_CLAIMS_NAMESPACE]).toBeObject()
   // Test if the custom claims work
-  expect(decodedJwt[JWT_CLAIMS_NAMESPACE]['x-hasura-name']).toEqual('Test name')
+  expect(decodedJwt[JWT_CLAIMS_NAMESPACE]["x-hasura-name"]).toEqual("Test name")
 })
 
-it('should logout', async () => {
-  const res = await request.post('/auth/logout').send()
+it("should logout", async () => {
+  const res = await request.post("/auth/logout").send()
   expect(res.status).toBe(204)
-  await request.post('/auth/login').send({ email, password })
+  await request.post("/auth/login").send({ email, password })
 })
 
-describe('Tests without cookies', () => {
-  it('Should login without cookies', async () => {
+describe("Tests without cookies", () => {
+  it("Should login without cookies", async () => {
     const { body, status } = await request
-      .post('/auth/login')
+      .post("/auth/login")
       .send({ email, password, cookie: false })
     // Save JWT token to globally scoped varaible.
     jwtToken = body.jwt_token
@@ -204,18 +225,20 @@ describe('Tests without cookies', () => {
     expect(body.refresh_token).toMatch(uuid_regex)
   })
 
-  it('should decode a valid custom user claim', async () => {
+  it("should decode a valid custom user claim", async () => {
     const decodedJwt = JWT.decode(jwtToken) as Token
     expect(decodedJwt[JWT_CLAIMS_NAMESPACE]).toBeObject()
     // Test if the custom claims work
-    expect(decodedJwt[JWT_CLAIMS_NAMESPACE]['x-hasura-name']).toEqual('Test name')
+    expect(decodedJwt[JWT_CLAIMS_NAMESPACE]["x-hasura-name"]).toEqual(
+      "Test name"
+    )
   })
 })
 
 // delete account
-it('should delete account', async () => {
+it("should delete account", async () => {
   await deleteAccount(request, { email, password })
-  expect('1').toBeString()
+  expect("1").toBeString()
 })
 
 // test anonymous account

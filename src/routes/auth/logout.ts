@@ -1,23 +1,26 @@
-import { Request, Response } from 'express'
-import { asyncWrapper } from '@shared/helpers'
-import { COOKIE_SECRET } from '@shared/config'
-import { request } from '@shared/request'
+import { Request, Response } from "express"
+import { asyncWrapper } from "@shared/helpers"
+import { COOKIE_SECRET } from "@shared/config"
+import { request } from "@shared/request"
 import {
   selectRefreshToken,
   deleteAllAccountRefreshTokens,
-  deleteRefreshToken
-} from '@shared/queries'
-import { logoutSchema } from '@shared/validation'
-import { AccountData } from '@shared/types'
+  deleteRefreshToken,
+} from "@shared/queries"
+import { logoutSchema } from "@shared/validation"
+import { AccountData } from "@shared/types"
 
 interface HasuraData {
   auth_refresh_tokens: { account: AccountData }[]
 }
 
-async function logout({ body, cookies, signedCookies }: Request, res: Response): Promise<unknown> {
+async function logout(
+  { body, cookies, signedCookies }: Request,
+  res: Response
+): Promise<unknown> {
   // clear cookie
-  res.clearCookie('refresh_token')
-  res.clearCookie('permission_variables')
+  res.clearCookie("refresh_token")
+  res.clearCookie("permission_variables")
 
   // should we delete all refresh tokens to this user or not
   const { all } = await logoutSchema.validateAsync(body)
@@ -30,7 +33,7 @@ async function logout({ body, cookies, signedCookies }: Request, res: Response):
     try {
       hasura_data = await request<HasuraData>(selectRefreshToken, {
         refresh_token,
-        current_timestamp: new Date()
+        current_timestamp: new Date(),
       })
     } catch (error) {
       return res.status(204).send()
@@ -45,7 +48,7 @@ async function logout({ body, cookies, signedCookies }: Request, res: Response):
     // delete all refresh tokens for user
     try {
       await request(deleteAllAccountRefreshTokens, {
-        user_id: account.user.id
+        user_id: account.user.id,
       })
     } catch (error) {
       return res.status(204).send()
@@ -54,7 +57,7 @@ async function logout({ body, cookies, signedCookies }: Request, res: Response):
     // if only to delete single refresh token
     try {
       await request(deleteRefreshToken, {
-        refresh_token
+        refresh_token,
       })
     } catch (error) {
       return res.status(204).send()

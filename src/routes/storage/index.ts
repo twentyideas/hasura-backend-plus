@@ -1,9 +1,15 @@
-import { OBJECT_PREFIX, META_PREFIX, STORAGE_RULES, PathConfig, containsSomeRule } from './utils'
-import { NextFunction, Response, Router } from 'express'
-import { deleteFile } from './delete'
-import { listGet } from './list_get'
-import { uploadFile } from './upload'
-import { RequestExtended } from '@shared/types'
+import {
+  OBJECT_PREFIX,
+  META_PREFIX,
+  STORAGE_RULES,
+  PathConfig,
+  containsSomeRule,
+} from "./utils"
+import { NextFunction, Response, Router } from "express"
+import { deleteFile } from "./delete"
+import { listGet } from "./list_get"
+import { uploadFile } from "./upload"
+import { RequestExtended } from "@shared/types"
 
 const router = Router()
 
@@ -22,16 +28,19 @@ const createRoutes = (
   const middleware = Router()
 
   // write, create, update
-  if (containsSomeRule(rules, ['write', 'create', 'update'])) {
-    middleware.post(path, createSecureMiddleware(uploadFile, rules, isMetadataRequest))
+  if (containsSomeRule(rules, ["write", "create", "update"])) {
+    middleware.post(
+      path,
+      createSecureMiddleware(uploadFile, rules, isMetadataRequest)
+    )
   }
 
   // read, get, list
-  if (containsSomeRule(rules, ['read', 'get', 'list'])) {
+  if (containsSomeRule(rules, ["read", "get", "list"])) {
     middleware.get(
       path,
       (_, res, next) => {
-        res.removeHeader('X-Frame-Options')
+        res.removeHeader("X-Frame-Options")
         next()
       },
       createSecureMiddleware(listGet, rules, isMetadataRequest)
@@ -39,8 +48,11 @@ const createRoutes = (
   }
 
   // write, delete
-  if (containsSomeRule(rules, ['write', 'delete'])) {
-    middleware.delete(path, createSecureMiddleware(deleteFile, rules, isMetadataRequest))
+  if (containsSomeRule(rules, ["write", "delete"])) {
+    middleware.delete(
+      path,
+      createSecureMiddleware(deleteFile, rules, isMetadataRequest)
+    )
   }
 
   return middleware

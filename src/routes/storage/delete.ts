@@ -1,17 +1,17 @@
-import { NextFunction, Response } from 'express'
+import { NextFunction, Response } from "express"
 import {
   PathConfig,
   createContext,
   getHeadObject,
   getKey,
   hasPermission,
-  replaceMetadata
-} from './utils'
+  replaceMetadata,
+} from "./utils"
 
-import Boom from '@hapi/boom'
-import { S3_BUCKET } from '@shared/config'
-import { s3 } from '@shared/s3'
-import { RequestExtended } from '@shared/types'
+import Boom from "@hapi/boom"
+import { S3_BUCKET } from "@shared/config"
+import { s3 } from "@shared/s3"
+import { RequestExtended } from "@shared/types"
 
 export const deleteFile = async (
   req: RequestExtended,
@@ -34,7 +34,7 @@ export const deleteFile = async (
     // * Delete the object, sharp
     const params = {
       Bucket: S3_BUCKET as string,
-      Key: getKey(req)
+      Key: getKey(req),
     }
     try {
       await s3.deleteObject(params).promise()

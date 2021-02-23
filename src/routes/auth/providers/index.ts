@@ -1,13 +1,13 @@
-import { AUTH_HAS_ONE_PROVIDER } from '@shared/config'
-import { Router } from 'express'
+import { AUTH_HAS_ONE_PROVIDER } from "@shared/config"
+import { Router } from "express"
 
-import github from './github'
-import google from './google'
-import facebook from './facebook'
-import twitter from './twitter'
-import apple from './apple'
-import windowslive from './windowslive'
-import linkedin from './linkedin'
+import github from "./github"
+import google from "./google"
+import facebook from "./facebook"
+import twitter from "./twitter"
+import apple from "./apple"
+import windowslive from "./windowslive"
+import linkedin from "./linkedin"
 
 const initRoutes = (): Router | undefined => {
   if (AUTH_HAS_ONE_PROVIDER) {
