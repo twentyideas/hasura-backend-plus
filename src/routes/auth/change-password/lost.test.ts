@@ -23,6 +23,7 @@ describeIfSecurePasswordChange("Reset lost password", () => {
     expect(message.Content.Headers.Subject).toInclude("Reset your password")
     ticket = message.Content.Headers["X-Ticket"][0]
     expect(ticket).toBeString()
+    expect(message.Content.Body).toInclude(`?ticket=${ticket}`)
     await deleteMailHogEmail(message)
   })
 
