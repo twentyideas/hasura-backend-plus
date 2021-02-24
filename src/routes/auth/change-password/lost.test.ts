@@ -23,6 +23,7 @@ describeIfSecurePasswordChange("Reset lost password", () => {
     expect(message.Content.Headers.Subject).toInclude("Reset your password")
     ticket = message.Content.Headers["X-Ticket"][0]
     expect(ticket).toBeString()
+    console.log(message.Content.Body)
     expect(message.Content.Body).toInclude(
       `${LOST_PASSWORD_URL}?ticket=${ticket}`
     )
