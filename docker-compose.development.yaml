@@ -1,25 +1,26 @@
-version: '3.6'
+version: "3.6"
 services:
   hasura-backend-plus:
     build:
       context: .
       dockerfile: Dockerfile.dev
-    env_file: '.env.development'
+    env_file: ".env.development"
     depends_on:
-      - 'mailhog'
+      - "mailhog"
     environment:
       NODE_ENV: development
       JWT_ALGORITHM: HS256
-      JWT_KEY: '${JWT_KEY}'
+      JWT_KEY: "${JWT_KEY}"
       SMTP_HOST: mailhog
       SMTP_PORT: 1025
-      SMTP_SECURE: 'false'
+      SMTP_SECURE: "false"
+      LOST_PASSWORD_URL: http://localhost:7443/reset-password
     volumes:
       - .:/app
       - /app/node_modules
   graphql-engine:
     ports:
-      - '8080:8080'
+      - "8080:8080"
     environment:
       HASURA_GRAPHQL_JWT_SECRET: '{"type": "HS256", "key": "${JWT_KEY}"}'
   minio:
