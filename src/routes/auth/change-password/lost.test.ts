@@ -1,6 +1,6 @@
 import "jest-extended"
 
-import { LOST_PASSWORD_ENABLE } from "@shared/config"
+import { LOST_PASSWORD_ENABLE, LOST_PASSWORD_URL } from "@shared/config"
 import { account, request } from "@test/test-mock-account"
 import { mailHogSearch, deleteMailHogEmail } from "@test/test-utils"
 
@@ -23,7 +23,9 @@ describeIfSecurePasswordChange("Reset lost password", () => {
     expect(message.Content.Headers.Subject).toInclude("Reset your password")
     ticket = message.Content.Headers["X-Ticket"][0]
     expect(ticket).toBeString()
-    expect(message.Content.Body).toInclude(`?ticket=${ticket}`)
+    expect(message.Content.Body).toInclude(
+      `${LOST_PASSWORD_URL}?ticket=${ticket}`
+    )
     await deleteMailHogEmail(message)
   })
 
