@@ -3,7 +3,7 @@ import { v4 as uuidv4 } from "uuid"
 import Boom from "@hapi/boom"
 
 import { asyncWrapper, selectAccountByEmail } from "@shared/helpers"
-import { EMAILS_ENABLE, SERVER_URL } from "@shared/config"
+import { EMAILS_ENABLE, SERVER_URL, LOST_PASSWORD_URL } from "@shared/config"
 import { emailClient } from "@shared/email"
 import { forgotSchema } from "@shared/validation"
 import { setNewTicket } from "@shared/queries"
@@ -62,7 +62,7 @@ async function requestChangePassword(
       template: "lost-password",
       locals: {
         ticket,
-        url: SERVER_URL,
+        url: LOST_PASSWORD_URL ?? SERVER_URL,
         display_name: account.user.display_name,
       },
       message: {

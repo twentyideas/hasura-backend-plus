@@ -5,6 +5,7 @@ import { castIntEnv, castBooleanEnv } from "./utils"
  */
 export const {
   SERVER_URL,
+  LOST_PASSWORD_URL,
   REDIRECT_URL_ERROR,
   REDIRECT_URL_SUCCESS,
   HASURA_GRAPHQL_ADMIN_SECRET,
