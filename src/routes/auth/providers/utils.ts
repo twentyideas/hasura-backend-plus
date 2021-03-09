@@ -152,6 +152,10 @@ const providerCallback = async (
     res.redirect(PROVIDER_FAILURE_REDIRECT as string)
   }
 
+  console.log(
+    `providerCallback with PROVIDER_SUCCESS_REDIRECT ${PROVIDER_SUCCESS_REDIRECT}`
+  )
+
   // redirect back user to app url
   res.redirect(`${PROVIDER_SUCCESS_REDIRECT}?refresh_token=${refresh_token}`)
 }
@@ -177,6 +181,9 @@ export const initProvider = <T extends Strategy>(
     callbackMethod = "GET",
     ...options
   } = settings
+
+  console.log(`initProvider with SERVER_URL ${SERVER_URL}`)
+
   passport.use(
     new strategy(
       {
