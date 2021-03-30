@@ -11,6 +11,8 @@ import {
   JWT_CLAIMS_NAMESPACE,
   HOST,
   PORT,
+  ADMIN_SECRET_HEADER,
+  HASURA_GRAPHQL_ADMIN_SECRET,
   // ANONYMOUS_USERS_ENABLE
 } from "@shared/config"
 import { generateRandomString, selectAccountByEmail } from "@shared/helpers"
@@ -65,10 +67,10 @@ it("should create an account", async () => {
   const { status } = await request
     .post("/auth/register")
     .send({ email, password, user_data: { name: "Test name" } })
-  expect(status).toEqual(204)
+  expect(status).toEqual(200)
 })
 
-it("should fail to create accunt with unallowed role", async () => {
+it("should fail to create account with unallowed role", async () => {
   const { status } = await request.post("/auth/register").send({
     email: "test1@nhost.io",
     password,
@@ -93,7 +95,7 @@ it("should fail to create accunt with default_role that does not overlap allowed
   expect(status).toEqual(400)
 })
 
-it("should create account with default_rolw that is in the ALLOWED_USER_ROLES variable", async () => {
+it("should create account with default_role that is in the ALLOWED_USER_ROLES variable", async () => {
   const { status } = await request.post("/auth/register").send({
     email: "test3@nhost.io",
     password,
@@ -102,7 +104,7 @@ it("should create account with default_rolw that is in the ALLOWED_USER_ROLES va
       default_role: "editor",
     },
   })
-  expect(status).toEqual(204)
+  expect(status).toEqual(200)
 })
 
 it("should register account with default_role and allowed_roles set", async () => {
@@ -115,7 +117,7 @@ it("should register account with default_role and allowed_roles set", async () =
       allowed_roles: ["user", "me"],
     },
   })
-  expect(status).toEqual(204)
+  expect(status).toEqual(200)
 })
 
 it("should tell the account already exists", async () => {
@@ -191,6 +193,26 @@ it("should sign the user in", async () => {
     .send({ email, password })
   // Save JWT token to globally scoped varaible.
   jwtToken = body.jwt_token
+  expect(status).toEqual(200)
+  expect(body.jwt_token).toBeString()
+  expect(body.jwt_expires_in).toBeNumber()
+})
+
+it("should not sign user in with invalid admin secret", async () => {
+  const { status } = await request
+    .post("/auth/login")
+    .set(ADMIN_SECRET_HEADER, "invalidsecret")
+    .send({ email, password: "invalidpassword" })
+
+  expect(status).toEqual(401)
+})
+
+it("should sign in user with valid admin secret", async () => {
+  const { body, status } = await request
+    .post("/auth/login")
+    .set(ADMIN_SECRET_HEADER, HASURA_GRAPHQL_ADMIN_SECRET as string)
+    .send({ email, password: "invalidpassword" })
+
   expect(status).toEqual(200)
   expect(body.jwt_token).toBeString()
   expect(body.jwt_expires_in).toBeNumber()
