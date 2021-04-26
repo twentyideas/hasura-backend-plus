@@ -54,8 +54,15 @@ export const getFile = async (
     return res.boom.forbidden()
   }
 
+  const ONE_WEEK_IN_SECONDS = 604800
+
   if (isMetadataRequest) {
-    return res.status(200).send({ key, ...headObject })
+    const signedUrl = s3.getSignedUrl("getObject", {
+      Bucket: STORAGE.S3_BUCKET,
+      Key: key,
+      Expires: ONE_WEEK_IN_SECONDS,
+    })
+    return res.status(200).send({ key, ...headObject, signedUrl })
   } else {
     if (
       req.query.w ||
