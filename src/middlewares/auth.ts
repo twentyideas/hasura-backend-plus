@@ -1,5 +1,5 @@
 import { Response, NextFunction } from "express"
-import { COOKIE_SECRET } from "@shared/config"
+import { COOKIES } from "@shared/config"
 import {
   RefreshTokenMiddleware,
   RequestExtended,
@@ -13,7 +13,7 @@ export function authMiddleware(
   req: RequestExtended,
   res: Response,
   next: NextFunction
-): void {
+) {
   let refresh_token = {
     value: null,
     type: null,
@@ -54,7 +54,7 @@ export function authMiddleware(
   // -------------------------------------
   // COOKIES
   // -------------------------------------
-  const cookiesInUse = COOKIE_SECRET ? req.signedCookies : req.cookies
+  const cookiesInUse = COOKIES.SECRET ? req.signedCookies : req.cookies
 
   if ("refresh_token" in cookiesInUse) {
     refresh_token = {
@@ -65,9 +65,12 @@ export function authMiddleware(
   }
 
   if ("permission_variables" in cookiesInUse) {
-    req.permission_variables = getPermissionVariablesFromCookie(req)
+    try {
+      req.permission_variables = getPermissionVariablesFromCookie(req)
+    } catch (err) {
+      return res.boom.unauthorized(err.message)
+    }
   }
 
-  // if (refresh_token) console.log('in auth middleware')
   next()
 }

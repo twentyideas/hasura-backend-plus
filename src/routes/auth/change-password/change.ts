@@ -1,5 +1,4 @@
 import { Response } from "express"
-import Boom from "@hapi/boom"
 import bcrypt from "bcryptjs"
 
 import {
@@ -11,7 +10,7 @@ import {
 import { changePasswordFromOldSchema } from "@shared/validation"
 import { updatePasswordWithUserId } from "@shared/queries"
 import { request } from "@shared/request"
-import { RequestExtended } from "@shared/types"
+import { AccountData, RequestExtended } from "@shared/types"
 
 /**
  * Change the password from the current one
@@ -21,7 +20,7 @@ async function basicPasswordChange(
   res: Response
 ): Promise<unknown> {
   if (!req.permission_variables) {
-    throw Boom.unauthorized("Not logged in")
+    return res.boom.unauthorized("Not logged in")
   }
 
   const { "user-id": user_id } = req.permission_variables
@@ -31,15 +30,33 @@ async function basicPasswordChange(
     new_password,
   } = await changePasswordFromOldSchema.validateAsync(req.body)
 
-  await checkHibp(new_password)
-  // Search the account from the JWT's account id
-  const { password_hash } = await selectAccountByUserId(user_id)
-  // Check the old (current) password
-  if (!(await bcrypt.compare(old_password, password_hash))) {
-    throw Boom.unauthorized("Incorrect current password.")
+  try {
+    await checkHibp(new_password)
+  } catch (err) {
+    return res.boom.badRequest(err.message)
   }
 
-  const newPasswordHash = await hashPassword(new_password)
+  // Search the account from the JWT's account id
+  let password_hash: AccountData["password_hash"]
+  try {
+    const account = await selectAccountByUserId(user_id)
+    password_hash = account.password_hash
+  } catch (err) {
+    return res.boom.badRequest(err.message)
+  }
+
+  // Check the old (current) password
+  if (!(await bcrypt.compare(old_password, password_hash))) {
+    return res.boom.unauthorized("Incorrect current password.")
+  }
+
+  let newPasswordHash: string
+  try {
+    newPasswordHash = await hashPassword(new_password)
+  } catch (err) {
+    return res.boom.internal(err.message)
+  }
+
   await request(updatePasswordWithUserId, {
     user_id,
     password_hash: newPasswordHash,

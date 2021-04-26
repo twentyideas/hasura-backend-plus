@@ -1,4 +1,4 @@
-import { JWT_CUSTOM_FIELDS } from "./config"
+import { JWT } from "./config"
 import gql from "graphql-tag"
 
 const accountFragment = gql`
@@ -12,7 +12,7 @@ const accountFragment = gql`
     user {
       id
       display_name
-      ${JWT_CUSTOM_FIELDS.join("\n\t\t\t")}
+      ${JWT.CUSTOM_FIELDS.join("\n\t\t\t")}
     }
     is_anonymous
     ticket
@@ -160,6 +160,19 @@ export const selectRefreshToken = gql`
   ${accountFragment}
 `
 
+export const accountOfRefreshToken = gql`
+  query($refresh_token: uuid!) {
+    auth_refresh_tokens(
+      where: { _and: [{ refresh_token: { _eq: $refresh_token } }] }
+    ) {
+      account {
+        ...accountFragment
+      }
+    }
+  }
+  ${accountFragment}
+`
+
 export const updateRefreshToken = gql`
   mutation(
     $old_refresh_token: uuid!
@@ -209,6 +222,9 @@ export const activateAccount = gql`
       _set: { active: true, ticket: $new_ticket, ticket_expires_at: $now }
     ) {
       affected_rows
+      returning {
+        id
+      }
     }
   }
 `

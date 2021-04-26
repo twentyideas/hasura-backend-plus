@@ -1,20 +1,23 @@
 import { Request, Response } from "express"
-import Boom from "@hapi/boom"
 import bcrypt from "bcryptjs"
 import { v4 as uuidv4 } from "uuid"
 import { asyncWrapper, selectAccount } from "@shared/helpers"
 import { newJwtExpiry, createHasuraJwt } from "@shared/jwt"
 import { setRefreshToken } from "@shared/cookies"
-import { loginAnonymouslySchema, loginSchema } from "@shared/validation"
+import {
+  loginAnonymouslySchema,
+  loginSchema,
+  magicLinkLoginSchema,
+} from "@shared/validation"
 import { insertAccount } from "@shared/queries"
 import { request } from "@shared/request"
 import { AccountData, UserData, Session } from "@shared/types"
+import { emailClient } from "@shared/email"
 import {
-  ADMIN_SECRET_HEADER,
-  ANONYMOUS_USERS_ENABLE,
-  DEFAULT_ANONYMOUS_ROLE,
-  HASURA_GRAPHQL_ADMIN_SECRET,
-  USER_IMPERSONATION_ENABLE,
+  AUTHENTICATION,
+  APPLICATION,
+  REGISTRATION,
+  HEADERS,
 } from "@shared/config"
 
 interface HasuraData {
@@ -31,7 +34,7 @@ async function loginAccount(
   // default to true
   const useCookie = typeof body.cookie !== "undefined" ? body.cookie : true
 
-  if (ANONYMOUS_USERS_ENABLE) {
+  if (AUTHENTICATION.ANONYMOUS_USERS_ENABLE) {
     const { anonymous } = await loginAnonymouslySchema.validateAsync(body)
 
     // if user tries to sign in anonymously
@@ -46,9 +49,9 @@ async function loginAccount(
             ticket,
             active: true,
             is_anonymous: true,
-            default_role: DEFAULT_ANONYMOUS_ROLE,
+            default_role: REGISTRATION.DEFAULT_ANONYMOUS_ROLE,
             account_roles: {
-              data: [{ role: DEFAULT_ANONYMOUS_ROLE }],
+              data: [{ role: REGISTRATION.DEFAULT_ANONYMOUS_ROLE }],
             },
             user: {
               data: { display_name: "Anonymous user" },
@@ -56,13 +59,13 @@ async function loginAccount(
           },
         })
       } catch (error) {
-        throw Boom.badImplementation(
+        return res.boom.badImplementation(
           "Unable to create user and sign in user anonymously"
         )
       }
 
       if (!hasura_data.insert_auth_accounts.returning.length) {
-        throw Boom.badImplementation(
+        return res.boom.badImplementation(
           "Unable to create user and sign in user anonymously"
         )
       }
@@ -82,29 +85,67 @@ async function loginAccount(
   }
 
   // else, login users normally
-  const { password } = await loginSchema.validateAsync(body)
+  const { password } = await (AUTHENTICATION.ENABLE_MAGIC_LINK
+    ? magicLinkLoginSchema
+    : loginSchema
+  ).validateAsync(body)
 
   const account = await selectAccount(body)
 
   if (!account) {
-    throw Boom.badRequest("Account does not exist.")
+    return res.boom.badRequest("Account does not exist.")
   }
 
-  const { id, mfa_enabled, password_hash, active, ticket } = account
+  const { id, mfa_enabled, password_hash, active, ticket, email } = account
+
+  if (typeof password === "undefined") {
+    const refresh_token = await setRefreshToken(res, id, useCookie)
+
+    try {
+      await emailClient.send({
+        template: "magic-link",
+        message: {
+          to: email,
+          headers: {
+            "x-token": {
+              prepared: true,
+              value: refresh_token,
+            },
+          },
+        },
+        locals: {
+          display_name: account.user.display_name,
+          token: refresh_token,
+          url: APPLICATION.SERVER_URL,
+          action: "log in",
+        },
+      })
+
+      return res.send({ magicLink: true })
+    } catch (err) {
+      console.error(err)
+      return res.boom.badImplementation()
+    }
+  }
 
   if (!active) {
-    throw Boom.badRequest("Account is not activated.")
+    return res.boom.badRequest("Account is not activated.")
   }
 
   // Handle User Impersonation Check
-  const adminSecret = headers[ADMIN_SECRET_HEADER]
+  const adminSecret = headers[HEADERS.ADMIN_SECRET_HEADER]
   const hasAdminSecret = Boolean(adminSecret)
-  const isAdminSecretCorrect = adminSecret === HASURA_GRAPHQL_ADMIN_SECRET
+  const isAdminSecretCorrect =
+    adminSecret === APPLICATION.HASURA_GRAPHQL_ADMIN_SECRET
   let userImpersonationValid = false
-  if (USER_IMPERSONATION_ENABLE && hasAdminSecret && !isAdminSecretCorrect) {
-    throw Boom.unauthorized("Invalid x-admin-secret")
+  if (
+    AUTHENTICATION.USER_IMPERSONATION_ENABLE &&
+    hasAdminSecret &&
+    !isAdminSecretCorrect
+  ) {
+    return res.boom.unauthorized("Invalid x-admin-secret")
   } else if (
-    USER_IMPERSONATION_ENABLE &&
+    AUTHENTICATION.USER_IMPERSONATION_ENABLE &&
     hasAdminSecret &&
     isAdminSecretCorrect
   ) {
@@ -114,7 +155,7 @@ async function loginAccount(
   // Validate Password
   const isPasswordCorrect = await bcrypt.compare(password, password_hash)
   if (!isPasswordCorrect && !userImpersonationValid) {
-    throw Boom.unauthorized("Username and password do not match")
+    return res.boom.unauthorized("Username and password do not match")
   }
 
   if (mfa_enabled) {

@@ -7,13 +7,13 @@ import {
   hasPermission,
 } from "./utils"
 
-import Boom from "@hapi/boom"
 import sharp from "sharp"
 import { createHash } from "crypto"
-import { S3_BUCKET } from "@shared/config"
+import { STORAGE } from "@shared/config"
 import { s3 } from "@shared/s3"
 import { RequestExtended } from "@shared/types"
 import { imgTransformParams } from "@shared/validation"
+import type { S3 } from "aws-sdk"
 
 function getHash(items: (string | number | Buffer)[]): string {
   const hash = createHash("sha256")
@@ -35,24 +35,27 @@ export const getFile = async (
   isMetadataRequest = false
 ): Promise<unknown> => {
   const key = getKey(req)
-  const headObject = await getHeadObject(req)
+
+  let headObject: S3.HeadObjectOutput | undefined
+
+  try {
+    headObject = await getHeadObject(req)
+  } catch {
+    return res.boom.notFound()
+  }
+
   if (!headObject?.Metadata) {
-    throw Boom.forbidden()
+    return res.boom.forbidden()
   }
 
   const context = createContext(req, headObject)
 
   if (!hasPermission([rules.get, rules.read], context)) {
-    throw Boom.forbidden()
+    return res.boom.forbidden()
   }
-  const ONE_WEEK_IN_SECONDS = 604800
+
   if (isMetadataRequest) {
-    const signedUrl = s3.getSignedUrl("getObject", {
-      Bucket: S3_BUCKET as string,
-      Key: key,
-      Expires: ONE_WEEK_IN_SECONDS,
-    })
-    return res.status(200).send({ key, ...headObject, signedUrl })
+    return res.status(200).send({ key, ...headObject })
   } else {
     if (
       req.query.w ||
@@ -71,7 +74,7 @@ export const getFile = async (
       const JPEG = "image/jpeg"
 
       const params = {
-        Bucket: S3_BUCKET as string,
+        Bucket: STORAGE.S3_BUCKET,
         Key: key,
       }
       const contentType = headObject?.ContentType
@@ -79,7 +82,7 @@ export const getFile = async (
       const object = await s3.getObject(params).promise()
 
       if (!object.Body) {
-        throw Boom.badImplementation("File found without body")
+        return res.boom.notFound("File found without body")
       }
 
       const transformer = sharp(object.Body as Buffer)
@@ -96,11 +99,11 @@ export const getFile = async (
         const { height, width } = await transformer.metadata()
 
         if (!height) {
-          throw Boom.badImplementation("Unable to determine image height")
+          return res.boom.badImplementation("Unable to determine image height")
         }
 
         if (!width) {
-          throw Boom.badImplementation("Unable to determine image width")
+          return res.boom.badImplementation("Unable to determine image width")
         }
 
         let imageHeight = height
@@ -156,7 +159,7 @@ export const getFile = async (
       }
 
       const params = {
-        Bucket: S3_BUCKET as string,
+        Bucket: STORAGE.S3_BUCKET,
         Key: key,
         Range: range,
       }
@@ -172,7 +175,7 @@ export const getFile = async (
       res.set("Content-Length", headObject.ContentLength?.toString())
       res.set("Last-Modified", headObject.LastModified?.toUTCString())
       res.set("Content-Disposition", `inline;`)
-      res.set("Cache-Control", "public, max-age=3w1557600")
+      res.set("Cache-Control", "public, max-age=31557600")
       res.set("ETag", headObject.ETag)
 
       // Set Content Range, Length Accepted Ranges
