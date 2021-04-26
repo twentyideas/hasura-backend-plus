@@ -28,3 +28,7 @@ export const LOST_PASSWORD_ENABLE = castBooleanEnv(
   "LOST_PASSWORD_ENABLE",
   false
 )
+export const USER_IMPERSONATION_ENABLE = castBooleanEnv(
+  "USER_IMPERSONATION_ENABLE",
+  false
+)

@@ -8,8 +8,14 @@ import { setRefreshToken } from "@shared/cookies"
 import { loginAnonymouslySchema, loginSchema } from "@shared/validation"
 import { insertAccount } from "@shared/queries"
 import { request } from "@shared/request"
-import { AccountData } from "@shared/types"
-import { ANONYMOUS_USERS_ENABLE, DEFAULT_ANONYMOUS_ROLE } from "@shared/config"
+import { AccountData, UserData, Session } from "@shared/types"
+import {
+  ADMIN_SECRET_HEADER,
+  ANONYMOUS_USERS_ENABLE,
+  DEFAULT_ANONYMOUS_ROLE,
+  HASURA_GRAPHQL_ADMIN_SECRET,
+  USER_IMPERSONATION_ENABLE,
+} from "@shared/config"
 
 interface HasuraData {
   insert_auth_accounts: {
@@ -19,7 +25,7 @@ interface HasuraData {
 }
 
 async function loginAccount(
-  { body }: Request,
+  { body, headers }: Request,
   res: Response
 ): Promise<unknown> {
   // default to true
@@ -68,21 +74,10 @@ async function loginAccount(
       const jwt_token = createHasuraJwt(account)
       const jwt_expires_in = newJwtExpiry
 
-      // return
-      if (useCookie) {
-        res.send({
-          jwt_token,
-          jwt_expires_in,
-        })
-      } else {
-        res.send({
-          jwt_token,
-          jwt_expires_in,
-          refresh_token,
-        })
-      }
+      const session: Session = { jwt_token, jwt_expires_in, user: account.user }
+      if (useCookie) session.refresh_token = refresh_token
 
-      return
+      return res.send(session)
     }
   }
 
@@ -101,7 +96,24 @@ async function loginAccount(
     throw Boom.badRequest("Account is not activated.")
   }
 
-  if (!(await bcrypt.compare(password, password_hash))) {
+  // Handle User Impersonation Check
+  const adminSecret = headers[ADMIN_SECRET_HEADER]
+  const hasAdminSecret = Boolean(adminSecret)
+  const isAdminSecretCorrect = adminSecret === HASURA_GRAPHQL_ADMIN_SECRET
+  let userImpersonationValid = false
+  if (USER_IMPERSONATION_ENABLE && hasAdminSecret && !isAdminSecretCorrect) {
+    throw Boom.unauthorized("Invalid x-admin-secret")
+  } else if (
+    USER_IMPERSONATION_ENABLE &&
+    hasAdminSecret &&
+    isAdminSecretCorrect
+  ) {
+    userImpersonationValid = true
+  }
+
+  // Validate Password
+  const isPasswordCorrect = await bcrypt.compare(password, password_hash)
+  if (!isPasswordCorrect && !userImpersonationValid) {
     throw Boom.unauthorized("Username and password do not match")
   }
 
@@ -115,20 +127,16 @@ async function loginAccount(
   // generate JWT
   const jwt_token = createHasuraJwt(account)
   const jwt_expires_in = newJwtExpiry
-
-  // return
-  if (useCookie) {
-    res.send({
-      jwt_token,
-      jwt_expires_in,
-    })
-  } else {
-    res.send({
-      jwt_token,
-      jwt_expires_in,
-      refresh_token,
-    })
+  const user: UserData = {
+    id: account.user.id,
+    display_name: account.user.display_name,
+    email: account.email,
+    avatar_url: account.user.avatar_url,
   }
+  const session: Session = { jwt_token, jwt_expires_in, user }
+  if (!useCookie) session.refresh_token = refresh_token
+
+  res.send(session)
 }
 
 export default asyncWrapper(loginAccount)
