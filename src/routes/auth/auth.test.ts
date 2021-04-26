@@ -233,6 +233,7 @@ manualActivationIt(
 manualActivationIt(
   "should activate the account from a valid ticket",
   async () => {
+    let ticket
     if (APPLICATION.EMAILS_ENABLE) {
       // Sends the email, checks if it's received and use the link for activation
       const [message] = await mailHogSearch(email)
@@ -240,11 +241,13 @@ manualActivationIt(
       expect(message.Content.Headers.Subject).toInclude(
         "Confirm your email address"
       )
-      message.Content.Headers["X-Ticket"][0]
+      ticket = message.Content.Headers["X-Ticket"][0]
       await deleteMailHogEmail(message)
     } else {
-      ;(await selectAccountByEmail(email)).ticket
+      ticket = (await selectAccountByEmail(email)).ticket
     }
+    const { status } = await request.get(`/auth/activate?ticket=${ticket}`)
+    expect(status).toBeOneOf([204, 302])
   }
 )
 
