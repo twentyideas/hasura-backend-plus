@@ -98,6 +98,9 @@ export function generatePermissionVariables(
     [`${prefix}user-id`]: user.id,
     [`${prefix}allowed-roles`]: accountRoles,
     [`${prefix}default-role`]: role,
+    [`${prefix}organization-ids`]: JSON.stringify(
+      user.organization_members?.map(item => item.organization_id)
+    ),
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     ...JWT_CUSTOM_FIELDS.reduce<{ [key: string]: ClaimValueType }>(
       (aggr: any, cursor) => {

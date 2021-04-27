@@ -9,6 +9,7 @@ export type ClaimValueType =
   | RegExp[]
   | boolean
   | boolean[]
+  | OrganizationMember[]
   | null
   | undefined
 
@@ -49,12 +50,17 @@ export interface Session {
   user: UserData
 }
 
+export interface OrganizationMember {
+  organization_id: number
+}
+
 export interface UserData {
   [key: string]: ClaimValueType
   id: string
   email?: string
   display_name: string
   avatar_url?: string
+  organization_members?: OrganizationMember[]
 }
 
 export interface AccountData {

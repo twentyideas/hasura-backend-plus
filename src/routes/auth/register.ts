@@ -98,6 +98,8 @@ async function registerAccount(
     display_name: account.user.display_name,
     email: account.email,
     avatar_url: account.user.avatar_url,
+    allowed_roles: account.account_roles.map(item => item.role),
+    default_role: account.default_role,
   }
 
   if (!AUTO_ACTIVATE_NEW_USERS && VERIFY_EMAILS) {
