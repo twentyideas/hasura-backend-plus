@@ -1,12 +1,4 @@
-import {
-  AUTO_ACTIVATE_NEW_USERS,
-  SERVER_URL,
-  EMAILS_ENABLE,
-  DEFAULT_USER_ROLE,
-  DEFAULT_ALLOWED_USER_ROLES,
-  ALLOWED_USER_ROLES,
-  VERIFY_EMAILS,
-} from "@shared/config"
+import { AUTHENTICATION, APPLICATION, REGISTRATION } from "@shared/config"
 import { Request, Response } from "express"
 import {
   asyncWrapper,
@@ -16,19 +8,17 @@ import {
 } from "@shared/helpers"
 import { newJwtExpiry, createHasuraJwt } from "@shared/jwt"
 
-import Boom from "@hapi/boom"
 import { emailClient } from "@shared/email"
 import { insertAccount } from "@shared/queries"
 import { setRefreshToken } from "@shared/cookies"
-import { registerSchema } from "@shared/validation"
+import { registerSchema, magicLinkRegisterSchema } from "@shared/validation"
 import { request } from "@shared/request"
 import { v4 as uuidv4 } from "uuid"
 import { InsertAccountData, UserData, Session } from "@shared/types"
 
-async function registerAccount(
-  { body }: Request,
-  res: Response
-): Promise<unknown> {
+async function registerAccount(req: Request, res: Response): Promise<unknown> {
+  const body = req.body
+
   const useCookie = typeof body.cookie !== "undefined" ? body.cookie : true
 
   const {
@@ -36,34 +26,55 @@ async function registerAccount(
     password,
     user_data = {},
     register_options = {},
-  } = await registerSchema.validateAsync(body)
+  } = await (AUTHENTICATION.ENABLE_MAGIC_LINK
+    ? magicLinkRegisterSchema
+    : registerSchema
+  ).validateAsync(body)
 
   if (await selectAccount(body)) {
-    throw Boom.badRequest("Account already exists.")
+    return res.boom.badRequest("Account already exists.")
   }
 
-  await checkHibp(password)
+  let password_hash: string | null = null
 
   const ticket = uuidv4()
   const now = new Date()
   const ticket_expires_at = new Date()
   ticket_expires_at.setTime(now.getTime() + 60 * 60 * 1000) // active for 60 minutes
-  const password_hash = await hashPassword(password)
 
-  const defaultRole = register_options.default_role ?? DEFAULT_USER_ROLE
+  if (typeof password !== "undefined") {
+    try {
+      await checkHibp(password)
+    } catch (err) {
+      return res.boom.badRequest(err.message)
+    }
+
+    try {
+      password_hash = await hashPassword(password)
+    } catch (err) {
+      return res.boom.internal(err.message)
+    }
+  }
+
+  const defaultRole =
+    register_options.default_role ?? REGISTRATION.DEFAULT_USER_ROLE
   const allowedRoles =
-    register_options.allowed_roles ?? DEFAULT_ALLOWED_USER_ROLES
+    register_options.allowed_roles ?? REGISTRATION.DEFAULT_ALLOWED_USER_ROLES
 
   // check if default role is part of allowedRoles
   if (!allowedRoles.includes(defaultRole)) {
-    throw Boom.badRequest("Default role must be part of allowed roles.")
+    return res.boom.badRequest("Default role must be part of allowed roles.")
   }
 
   // check if allowed roles is a subset of ALLOWED_ROLES
   if (
-    !allowedRoles.every((role: string) => ALLOWED_USER_ROLES.includes(role))
+    !allowedRoles.every((role: string) =>
+      REGISTRATION.ALLOWED_USER_ROLES.includes(role)
+    )
   ) {
-    throw Boom.badRequest("allowed roles must be a subset of ALLOWED_ROLES")
+    return res.boom.badRequest(
+      "allowed roles must be a subset of ALLOWED_ROLES"
+    )
   }
 
   const accountRoles = allowedRoles.map((role: string) => ({ role }))
@@ -76,7 +87,7 @@ async function registerAccount(
         password_hash,
         ticket,
         ticket_expires_at,
-        active: AUTO_ACTIVATE_NEW_USERS,
+        active: REGISTRATION.AUTO_ACTIVATE_NEW_USERS,
         default_role: defaultRole,
         account_roles: {
           data: accountRoles,
@@ -89,7 +100,7 @@ async function registerAccount(
   } catch (e) {
     console.error("Error inserting user account")
     console.error(e)
-    throw Boom.badImplementation("Error inserting user account")
+    return res.boom.badImplementation("Error inserting user account")
   }
 
   const account = accounts.insert_auth_accounts.returning[0]
@@ -100,14 +111,43 @@ async function registerAccount(
     avatar_url: account.user.avatar_url,
   }
 
-  if (!AUTO_ACTIVATE_NEW_USERS && VERIFY_EMAILS) {
-    if (!EMAILS_ENABLE) {
-      throw Boom.badImplementation("SMTP settings unavailable")
+  if (!REGISTRATION.AUTO_ACTIVATE_NEW_USERS && AUTHENTICATION.VERIFY_EMAILS) {
+    if (!APPLICATION.EMAILS_ENABLE) {
+      return res.boom.badImplementation("SMTP settings unavailable")
     }
 
     // use display name from `user_data` if available
     const display_name =
       "display_name" in user_data ? user_data.display_name : email
+
+    if (typeof password === "undefined") {
+      try {
+        await emailClient.send({
+          template: "magic-link",
+          message: {
+            to: user.email,
+            headers: {
+              "x-token": {
+                prepared: true,
+                value: ticket,
+              },
+            },
+          },
+          locals: {
+            display_name,
+            token: ticket,
+            url: APPLICATION.SERVER_URL,
+            action: "sign up",
+          },
+        })
+      } catch (err) {
+        console.error(err)
+        return res.boom.badImplementation()
+      }
+
+      const session: Session = { jwt_token: null, jwt_expires_in: null, user }
+      return res.send(session)
+    }
 
     try {
       await emailClient.send({
@@ -124,12 +164,12 @@ async function registerAccount(
         locals: {
           display_name,
           ticket,
-          url: SERVER_URL,
+          url: APPLICATION.SERVER_URL,
         },
       })
     } catch (err) {
       console.error(err)
-      throw Boom.badImplementation()
+      return res.boom.badImplementation()
     }
 
     const session: Session = { jwt_token: null, jwt_expires_in: null, user }

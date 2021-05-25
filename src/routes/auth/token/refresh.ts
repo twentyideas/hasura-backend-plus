@@ -2,7 +2,6 @@ import { asyncWrapper } from "@shared/helpers"
 import { Response } from "express"
 import { selectRefreshToken, updateRefreshToken } from "@shared/queries"
 
-import Boom from "@hapi/boom"
 import {
   newJwtExpiry,
   createHasuraJwt,
@@ -20,9 +19,9 @@ interface HasuraData {
 async function refreshToken(
   { refresh_token }: RequestExtended,
   res: Response
-): Promise<void> {
+): Promise<any> {
   if (!refresh_token || !refresh_token.value) {
-    throw Boom.unauthorized("Invalid or expired refresh token.")
+    return res.boom.unauthorized("Invalid or expired refresh token.")
   }
 
   // get account based on refresh token
@@ -35,7 +34,7 @@ async function refreshToken(
   )
 
   if (!auth_refresh_tokens?.length) {
-    throw Boom.unauthorized("Invalid or expired refresh token.")
+    return res.boom.unauthorized("Invalid or expired refresh token.")
   }
 
   // create a new refresh token
@@ -54,7 +53,7 @@ async function refreshToken(
       },
     })
   } catch (error) {
-    throw Boom.badImplementation("Unable to set new refresh token")
+    return res.boom.badImplementation("Unable to set new refresh token")
   }
 
   const permission_variables = JSON.stringify(

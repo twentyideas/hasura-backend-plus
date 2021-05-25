@@ -1,5 +1,5 @@
 import { Router, Response } from "express"
-import { S3_BUCKET } from "@shared/config"
+import { STORAGE } from "@shared/config"
 import { s3 } from "@shared/s3"
 import { RequestExtended } from "@shared/types"
 
@@ -10,7 +10,7 @@ const ONE_WEEK_IN_SECONDS = 604800
 signedUrl.post("/get", async (req: RequestExtended, res: Response) => {
   const key = req.body.filename
   const url = s3.getSignedUrl("getObject", {
-    Bucket: S3_BUCKET as string,
+    Bucket: STORAGE.S3_BUCKET,
     Key: key,
     Expires: ONE_WEEK_IN_SECONDS,
   })
@@ -20,7 +20,7 @@ signedUrl.post("/get", async (req: RequestExtended, res: Response) => {
 signedUrl.post("/put", async (req: RequestExtended, res: Response) => {
   const key = req.body.filename
   const url = s3.getSignedUrl("putObject", {
-    Bucket: S3_BUCKET as string,
+    Bucket: STORAGE.S3_BUCKET,
     Key: key,
     Expires: ONE_WEEK_IN_SECONDS,
   })
@@ -35,7 +35,7 @@ signedUrl.post(
 
       const { UploadId } = await s3
         .createMultipartUpload({
-          Bucket: S3_BUCKET as string,
+          Bucket: STORAGE.S3_BUCKET,
           Key: key,
         })
         .promise()
@@ -55,7 +55,7 @@ signedUrl.post("/getPartUrl", async (req: RequestExtended, res: Response) => {
     const PartNumber = req.body.partNumber
 
     const url = await s3.getSignedUrlPromise("uploadPart", {
-      Bucket: S3_BUCKET as string,
+      Bucket: STORAGE.S3_BUCKET,
       Key: key,
       UploadId,
       PartNumber,
@@ -78,7 +78,7 @@ signedUrl.post(
 
       await s3
         .abortMultipartUpload({
-          Bucket: S3_BUCKET as string,
+          Bucket: STORAGE.S3_BUCKET,
           Key: key,
           UploadId,
         })
@@ -107,7 +107,7 @@ signedUrl.post(
 
       await s3
         .completeMultipartUpload({
-          Bucket: S3_BUCKET as string,
+          Bucket: STORAGE.S3_BUCKET,
           Key: key,
           UploadId,
           MultipartUpload: { Parts },

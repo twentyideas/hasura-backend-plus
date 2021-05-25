@@ -1,8 +1,4 @@
-import {
-  ALLOWED_EMAIL_DOMAINS,
-  REGISTRATION_CUSTOM_FIELDS,
-  MIN_PASSWORD_LENGTH,
-} from "./config"
+import { REGISTRATION } from "./config"
 import Joi from "@hapi/joi"
 
 interface ExtendedStringSchema extends Joi.StringSchema {
@@ -25,9 +21,11 @@ const extendedJoi: ExtendedJoi = Joi.extend(joi => ({
         return this.$_addRule({ name: "allowedDomains" })
       },
       validate(value: string, helpers): unknown {
-        if (ALLOWED_EMAIL_DOMAINS) {
+        if (REGISTRATION.ALLOWED_EMAIL_DOMAINS) {
           const lowerValue = value.toLowerCase()
-          const allowedEmailDomains = ALLOWED_EMAIL_DOMAINS.split(",")
+          const allowedEmailDomains = REGISTRATION.ALLOWED_EMAIL_DOMAINS.split(
+            ","
+          )
 
           if (
             allowedEmailDomains.every(
@@ -44,7 +42,10 @@ const extendedJoi: ExtendedJoi = Joi.extend(joi => ({
   },
 }))
 
-const passwordRule = Joi.string().min(MIN_PASSWORD_LENGTH).max(128).required()
+const passwordRule = Joi.string()
+  .min(REGISTRATION.MIN_PASSWORD_LENGTH)
+  .max(128)
+  .required()
 
 const emailRule = extendedJoi.string().email().required().allowedDomains()
 
@@ -53,9 +54,13 @@ const accountFields = {
   password: passwordRule,
 }
 
+const magicLinkAccountFields = {
+  email: emailRule,
+}
+
 export const userDataFields = {
   user_data: Joi.object(
-    REGISTRATION_CUSTOM_FIELDS.reduce<{ [k: string]: Joi.Schema[] }>(
+    REGISTRATION.CUSTOM_FIELDS.reduce<{ [k: string]: Joi.Schema[] }>(
       (aggr, key) => ({
         ...aggr,
         [key]: [
@@ -82,6 +87,12 @@ export const userDataFields = {
 
 export const registerSchema = Joi.object({
   ...accountFields,
+  ...userDataFields,
+  cookie: Joi.boolean(),
+})
+
+export const magicLinkRegisterSchema = Joi.object({
+  ...magicLinkAccountFields,
   ...userDataFields,
   cookie: Joi.boolean(),
 })
@@ -117,12 +128,20 @@ export const logoutSchema = Joi.object({
 export const mfaSchema = Joi.object(codeFields)
 export const loginAnonymouslySchema = Joi.object({
   anonymous: Joi.boolean(),
-  email: Joi.string(), // these will be checked more regeriously in `loginSchema`
-  password: Joi.string(), // these will be checked more regeriously in `loginSchema`
+  email: Joi.string(), // these will be checked more rigorously in `loginSchema`
+  password: Joi.string(), // these will be checked more rigorously in `loginSchema`
+})
+export const magicLinkLoginAnonymouslySchema = Joi.object({
+  anonymous: Joi.boolean(),
+  email: Joi.string(), // these will be checked more rigorously in `loginSchema`
 })
 export const loginSchema = extendedJoi.object({
   email: emailRule,
   password: Joi.string().required(),
+  cookie: Joi.boolean(),
+})
+export const magicLinkLoginSchema = extendedJoi.object({
+  email: emailRule,
   cookie: Joi.boolean(),
 })
 export const forgotSchema = Joi.object({ email: emailRule })
@@ -145,4 +164,10 @@ export const imgTransformParams = Joi.object({
 export const fileMetadataUpdate = Joi.object({
   // action: Joi.string().valid('revoke-token','some-other-action').required(),
   action: Joi.string().valid("revoke-token").required(),
+})
+
+export const magicLinkQuery = Joi.object({
+  token: Joi.string().required(),
+  action: Joi.string().valid("log-in", "sign-up").required(),
+  cookie: Joi.boolean().optional(),
 })
