@@ -23,7 +23,7 @@ const transport = nodemailer.createTransport({
  */
 export const emailClient = new Email({
   transport,
-  message: { from: APPLICATION.SMTP_SENDER },
+  message: { from: APPLICATION.SMTP_SENDER, name: APPLICATION.SMTP_SENDER_NAME },
   send: APPLICATION.EMAILS_ENABLE,
   views: {
     root: path.resolve(process.env.PWD || ".", "custom/emails"),

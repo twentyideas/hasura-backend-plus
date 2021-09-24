@@ -45,6 +45,9 @@ export const APPLICATION = {
   get SMTP_SENDER() {
     return process.env.SMTP_SENDER || this.SMTP_USER
   },
+  get SMTP_SENDER_NAME() {
+    return process.env.SMTP_SENDER_NAME || this.SMTP_USER
+  },
   get SMTP_AUTH_METHOD() {
     return process.env.SMTP_AUTH_METHOD || "PLAIN"
   },
