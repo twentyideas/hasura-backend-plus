@@ -1,5 +1,4 @@
 import { APPLICATION } from "@shared/config"
-
 import Email from "email-templates"
 import nodemailer from "nodemailer"
 import path from "path"
@@ -23,7 +22,12 @@ const transport = nodemailer.createTransport({
  */
 export const emailClient = new Email({
   transport,
-  message: { from: APPLICATION.SMTP_SENDER, name: APPLICATION.SMTP_SENDER_NAME },
+  message: {
+    from: {
+      name: APPLICATION.SMTP_SENDER_NAME,
+      address: APPLICATION.SMTP_SENDER,
+    },
+  },
   send: APPLICATION.EMAILS_ENABLE,
   views: {
     root: path.resolve(process.env.PWD || ".", "custom/emails"),

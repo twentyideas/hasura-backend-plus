@@ -1,4 +1,0 @@
-{
-  "**/*.(js|ts|tsx|css)": "eslint --fix ",
-  "**/*.(ts|tsx)": "bash -c tsc --noEmit"
-}
