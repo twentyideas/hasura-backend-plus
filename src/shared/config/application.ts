@@ -13,6 +13,9 @@ export const APPLICATION = {
   get SERVER_URL() {
     return process.env.SERVER_URL || ""
   },
+  get LOST_PASSWORD_URL() {
+    return process.env.LOST_PASSWORD_URL || ""
+  },
   get REDIRECT_URL_ERROR() {
     return process.env.REDIRECT_URL_ERROR || ""
   },

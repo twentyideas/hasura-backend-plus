@@ -74,7 +74,7 @@ async function requestChangePassword(
       template: "lost-password",
       locals: {
         ticket,
-        url: APPLICATION.SERVER_URL,
+        url: APPLICATION.LOST_PASSWORD_URL,
         display_name: account.user.display_name,
       },
       message: {
